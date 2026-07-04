@@ -91,7 +91,13 @@ end
 
 local dims_intersecting = mcl_levelgen.dims_intersecting
 
-core.register_on_generated (function (vmanip, minp, maxp, _)
+core.register_on_generated (function (vmanip, minp, maxp, _, dim_name)
+	-- Only run Mineclonia's levelgen for the overworld dimension.
+	-- Other dimensions (registered via the engine dimension API) use
+	-- their own mapgen and should not have Mineclonia terrain.
+	if dim_name and dim_name ~= "overworld" then
+		return
+	end
 	-- profile.start ("5fv")
 	-- do_jit_ctrl ()
 	local emin, emax = vmanip:get_emerged_area ()

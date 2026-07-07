@@ -58,7 +58,8 @@ local function find_destination_pos(minp, maxp)
 		for x = maxp.x, minp.x, -1 do
 			for z = maxp.z, minp.z, -1 do
 				local pos = vector.new(x, y, z)
-				local nn = core.get_node(pos).name
+				-- Gateway portals are End-only by design.
+				local nn = core.get_node(pos, "end").name
 				if nn ~= "ignore" and nn ~= "mcl_portals:portal_gateway" and nn ~= "mcl_core:bedrock" then
 					local def = core.registered_nodes[nn]
 					if def and def.walkable then

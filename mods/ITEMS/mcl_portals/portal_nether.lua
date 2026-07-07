@@ -509,7 +509,7 @@ local function portal_emerge_area (player, param)
 	do
 		local linked_portal = get_linked_portal (dim, target)
 		if linked_portal then
-			core.load_area (linked_portal, linked_portal)
+			core.load_area (linked_portal, linked_portal, dim)
 			finalize_teleport (obj, linked_portal, nil, nil)
 			return
 		end
@@ -525,7 +525,7 @@ local function portal_emerge_area (player, param)
 
 	local function finalize(obj, pos, param2, bad_pos)
 		-- Move portal down one node if on snow cover or grass.
-		if core.get_item_group(core.get_node(pos).name, "dig_by_water") ~= 0 then
+		if core.get_item_group(core.get_node(pos, dim).name, "dig_by_water") ~= 0 then
 			pos.y = pos.y - 1
 		end
 
@@ -535,10 +535,10 @@ local function portal_emerge_area (player, param)
 	end
 
 	local liquid_pos
-	local nodes = core.find_nodes_in_area_under_air(minpos, maxpos, portal_search_groups)
+	local nodes = core.find_nodes_in_area_under_air(minpos, maxpos, portal_search_groups, dim)
 	for _, pos in pairs(nodes) do
 		if suitable_for_portal(pos, param2) and can_place_portal(pos, player_name) and portal_distance(pos, target) < link_distance[dim] then
-			if core.get_item_group(core.get_node(pos).name, "liquid") <= 0 then
+			if core.get_item_group(core.get_node(pos, dim).name, "liquid") <= 0 then
 				finalize(obj, pos, param2, false)
 				return
 			end
@@ -562,7 +562,7 @@ local function portal_emerge_area (player, param)
 
 	core.sound_play("mcl_portals_teleport", {pos = obj:get_pos(), gain = 0.5, max_hear_distance = 1}, true)
 	core.log("action", "[mcl_portal] Could not generate destination portal for " .. player_name .. " at " .. tostring(portal))
-	core.remove_node(portal)
+	core.remove_node(portal, dim)
 	teleport_finished(obj)
 end
 
@@ -586,7 +586,7 @@ local function teleport(obj)
 
 	local linked_portal = get_linked_portal(dim, target)
 	if linked_portal then
-		local linked_node = core.get_node(linked_portal)
+		local linked_node = core.get_node(linked_portal, dim)
 		finalize_teleport(obj, linked_portal, node.param2, linked_node.param2) ---@diagnostic disable-line: need-check-nil
 	elseif not obj:get_attach () then
 		local param2 = node.param2 ---@diagnostic disable-line: need-check-nil

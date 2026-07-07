@@ -249,7 +249,8 @@ local function end_teleport_entry_cb (player, data)
 	local platform = mcl_vars.mg_end_platform_pos
 	local v1 = vector.subtract (platform, 8)
 	local v2 = vector.add (platform, 8)
-	core.load_area (v1, v2)
+	-- The obsidian platform always spawns in the End.
+	core.load_area (v1, v2, "end")
 	local structure = mcl_structures.registered_structures["end_spawn_obsidian_platform"]
 	mcl_structures.place_structure (platform, structure,
 					PcgRandom (0), -1)
@@ -263,7 +264,7 @@ local function end_teleport_entry_cb (player, data)
 		local pos = mcl_biome_dispatch.get_end_portal_pos ()
 		if pos then
 			core.load_area (vector.offset (pos, -8, 0, -8),
-					vector.offset (pos, 8, 0, 8))
+					vector.offset (pos, 8, 0, 8), "end")
 			mcl_structures.place_structure (pos, exit_portal,
 							-- Induce dragon spawning.
 							PcgRandom (0), 5556)

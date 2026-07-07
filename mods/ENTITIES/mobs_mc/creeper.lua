@@ -186,7 +186,7 @@ function creeper_defs:boom(pos, strength, fire, no_remove)
 		local level = mcl_potions.get_effect_level (self.object,
 							    name)
 		mcl_potions.add_lingering_effect (pos, name, val.dur / 2,
-						  level, 2.5)
+						  level, 2.5, core.get_current_dim())
 	end
 	if not no_remove then
 		if self.is_mob then

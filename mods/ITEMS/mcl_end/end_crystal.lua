@@ -403,7 +403,8 @@ local function next_phase (phase)
 end
 
 local function delete_end_crystals_at_position (pos)
-	for object in core.objects_inside_radius (pos, 1.0) do
+	-- Dragon resurrection is End-only; scope to the End dimension.
+	for object in core.objects_inside_radius (pos, 1.0, "end") do
 		local entity = object:get_luaentity ()
 		if entity and entity.name == "mcl_end:crystal" then
 			object:remove ()

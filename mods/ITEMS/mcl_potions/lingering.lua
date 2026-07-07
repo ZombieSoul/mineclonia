@@ -12,7 +12,7 @@ end
 
 local function add_lingering_effects (pos, color, effects, is_water, texture,
 					  duration, custom_effect, potency, plus,
-					  initial_radius)
+					  initial_radius, dim)
 	local tbl = lingering_effects_at[pos]
 	if not tbl then
 	tbl = { }
@@ -25,12 +25,15 @@ local function add_lingering_effects (pos, color, effects, is_water, texture,
 			 effects = effects,
 			 texture = texture,
 			 initial_radius = initial_radius,
-			 -- The next three fields are only material if
-			 -- custom_effect is set.
+			 -- The next three fields are only material that
+			 custom_effect is set.
 			 custom_effect = custom_effect,
 			 level = (potency
 				  and potency_to_level (potency)),
-			 plus = plus, })
+			 plus = plus,
+			 -- Dimension the cloud is in, so the globalstep-driven
+			 -- tick can scope its spatial query to the right world.
+			 dim = dim, })
 end
 
 local function def_to_effect_list (def, potency, plus)
@@ -72,7 +75,7 @@ local function linger_particles(pos, d, texture, color)
 end
 
 function mcl_potions.add_lingering_effect (pos, name, duration, level,
-					   initial_radius)
+					   initial_radius, dim)
 	local def = mcl_potions.registered_effects[name]
 
 	if not def then
@@ -82,7 +85,7 @@ function mcl_potions.add_lingering_effect (pos, name, duration, level,
 			   { [name] = { dur = duration,
 					level = level, }, },
 			   false, "mcl_particles_effect.png", duration,
-			   nil, nil, nil, initial_radius)
+			   nil, nil, nil, initial_radius, dim)
 	linger_particles (pos, initial_radius, "mcl_particles_effect.png",
 			  def.particle_color or "#000000")
 end
@@ -120,8 +123,8 @@ core.register_globalstep(function(dtime)
 			end
 			end
 
-			-- Affect players and mobs
-			for obj in core.objects_inside_radius(pos, d) do
+			-- Affect players and mobs (scope to the cloud's dimension)
+			for obj in core.objects_inside_radius(pos, d, vals.dim) do
 				local entity = obj:get_luaentity()
 				if obj:is_player() or entity and entity.is_mob then
 					if vals.is_water then
@@ -272,7 +275,7 @@ function mcl_potions.register_lingering(name, descr, color, def)
 
 				add_lingering_effects (pos, color, effects, name == "water",
 							   texture, 30, def.custom_effect, potency,
-							   plus, d)
+							   plus, d, core.get_current_dim())
 				linger_particles (pos, d, texture, color)
 				if def.on_splash then def.on_splash (pos, potency+1) end
 				self.object:remove()

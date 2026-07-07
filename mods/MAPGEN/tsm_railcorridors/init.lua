@@ -394,8 +394,8 @@ end
 local function RecheckCartHack(params)
 	local pos = params[1]
 	local cart_id = params[2]
-	-- Find cart
-	for obj in core.objects_inside_radius(pos, 1) do
+	-- Find cart (these structures are overworld-only, y_max = 40)
+	for obj in core.objects_inside_radius(pos, 1, "overworld") do
 		if obj and obj:get_luaentity().name == cart_id then
 			-- Cart found! We can now safely call the callback func.
 			-- (calling it earlier has the danger of failing)

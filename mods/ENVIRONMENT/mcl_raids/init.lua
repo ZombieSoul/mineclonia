@@ -137,7 +137,7 @@ core.register_chatcommand("dump_banner_layers",{
 	func = function(pname)
 		local p = core.get_player_by_name(pname)
 		mcl_raids.drop_obanner(vector.offset(p:get_pos(),1,1,1))
-		for v in core.objects_inside_radius(p:get_pos(), 5) do
+		for v in core.objects_inside_radius(p:get_pos(), 5, p:get_dimension()) do
 			local l = v:get_luaentity()
 			if l and l.name == "mcl_banners:standing_banner" then
 				core.log(dump(l._base_color))

@@ -1039,7 +1039,7 @@ core.register_globalstep (function (dtime)
 				end
 				if count_homes >= 5 then
 					local count_cats = 0
-					for obj in core.objects_in_area (aa, bb) do
+					for obj in core.objects_in_area (aa, bb, player:get_dimension()) do
 						local entity = obj:get_luaentity ()
 						if entity and entity.name == "mobs_mc:cat" then
 							count_cats = count_cats + 1
@@ -1064,7 +1064,7 @@ core.register_globalstep (function (dtime)
 				local count_cats = 0
 				local aa = vector.offset (spawn_pos, -16, -8, -16)
 				local bb = vector.offset (spawn_pos, 16, 8, 16)
-				for obj in core.objects_in_area (aa, bb) do
+				for obj in core.objects_in_area (aa, bb, player:get_dimension()) do
 					local entity = obj:get_luaentity ()
 					if entity and entity.name == "mobs_mc:cat" then
 						count_cats = count_cats + 1

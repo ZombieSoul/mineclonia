@@ -50,7 +50,7 @@ local function wither_spawn(pos, player)
 				if not wither then return end
 				local wither_ent = wither:get_luaentity()
 				wither_ent._spawner = player:get_player_name()
-				for players in core.objects_inside_radius(pos, 20) do
+				for players in core.objects_inside_radius(pos, 20, player:get_dimension()) do
 					if players:is_player() then
 						awards.unlock(players:get_player_name(), "mcl:witheringHeights")
 					end

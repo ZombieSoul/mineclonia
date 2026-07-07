@@ -510,7 +510,11 @@ local function post_process_mapchunk (minp, maxp)
 	end
 end
 
-core.register_on_generated (post_process_mapchunk)
+local function _ersatz_pp(minp, maxp, blockseed, dim_name)
+	if dim_name and dim_name ~= "overworld" then return end
+	return post_process_mapchunk(minp, maxp, blockseed)
+end
+core.register_on_generated (_ersatz_pp)
 
 function mcl_levelgen.level_to_minetest_position (x, y, z)
 	if y_offset then

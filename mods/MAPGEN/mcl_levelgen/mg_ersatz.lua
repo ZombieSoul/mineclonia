@@ -591,7 +591,8 @@ local function generate_biome_dust (vm, min, max, minp, maxp)
 end
 
 local dims_intersecting = mcl_levelgen.dims_intersecting
-core.register_on_generated (function (vm, minp, maxp, _)
+core.register_on_generated (function (vm, minp, maxp, _, dim_name)
+	if dim_name and dim_name ~= "overworld" then return end
 	local min, max = vm:get_emerged_area ()
 
 	vm:get_data (cids)

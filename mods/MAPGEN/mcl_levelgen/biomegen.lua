@@ -333,7 +333,8 @@ core.set_gen_notify ({ custom = true, }, nil, {
 	"mcl_levelgen:gen_notifies",
 })
 
-core.register_on_generated (function (minp, maxp, blockseed)
+core.register_on_generated (function (minp, maxp, blockseed, dim_name)
+	if dim_name and dim_name ~= "overworld" then return end
 	local custom = core.get_mapgen_object ("gennotify").custom
 	if not custom then
 		return

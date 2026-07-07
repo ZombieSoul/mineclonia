@@ -71,7 +71,11 @@ mcl_player.register_globalstep(function(player)
 		local checkpos = vector.offset(player:get_pos(), 0, item_drop_settings.player_collect_height, 0)
 		online_players = nil
 		--magnet and collection
-		for object in core.objects_inside_radius(checkpos, range_xp) do
+		-- Pass the player's dimension so the query only sees items in the
+		-- same world. This runs in a globalstep (no DimContextGuard), so
+		-- without an explicit dim it would default to the overworld and
+		-- break item pickup in other dimensions.
+		for object in core.objects_inside_radius(checkpos, range_xp, player:get_dimension()) do
 			if not object:is_player() then
 				local le = object:get_luaentity()
 				if le and le.name == "__builtin:item" and not le._removed and

@@ -43,7 +43,7 @@ function mcl_lightning.register_on_strike(func)
 end
 
 -- select a random strike point, midpoint
-local function choose_pos(pos)
+local function choose_pos(pos, dim)
 	if not pos then
 		local playerlist = core.get_connected_players()
 		local playercount = #playerlist
@@ -56,6 +56,9 @@ local function choose_pos(pos)
 		local r = rng:next(1, playercount)
 		local randomplayer = playerlist[r]
 		pos = randomplayer:get_pos()
+		-- Lightning follows a player into whatever dimension they are in,
+		-- unless the caller already pinned a dimension.
+		dim = dim or randomplayer:get_dimension()
 
 		-- avoid striking underground
 		if pos.y < -20 then
@@ -79,7 +82,7 @@ local function choose_pos(pos)
 		return nil, nil
 	end
 
-	return pos, pos2
+	return pos, pos2, dim
 end
 
 local is_mushroom_islands
@@ -185,10 +188,13 @@ function mcl_lightning.strike_func(pos, pos2, objects, for_trap)
 end
 
 -- * pos: optional, if not given a random pos will be chosen
+-- * dim: optional, the dimension name/id to scope entity queries to.
+--   Defaults to the chosen random player's dimension, or the current
+--   callback context (overworld in a globalstep) when neither is set.
 -- * returns: bool - success if a strike happened
-function mcl_lightning.strike(pos, for_trap)
+function mcl_lightning.strike(pos, for_trap, dim)
 	local pos2
-	pos, pos2 = choose_pos(pos)
+	pos, pos2, dim = choose_pos(pos, dim)
 
 	if not pos then
 		return false
@@ -197,17 +203,17 @@ function mcl_lightning.strike(pos, for_trap)
 	if mcl_lightning.on_strike_functions then
 		for _, func in pairs(mcl_lightning.on_strike_functions) do
 			-- allow on_strike callbacks to destroy entities by re-obtaining objects for each callback
-			local objects = core.get_objects_inside_radius(pos2, 3.5)
+			local objects = core.get_objects_inside_radius(pos2, 3.5, dim)
 			local p,stop = func(pos, pos2, objects, for_trap)
 			if p then
 				pos = p
-				pos2 = choose_pos(p)
+				pos2 = choose_pos(p, dim)
 			end
 			do_strike = do_strike and not stop
 		end
 	end
 	if do_strike and pos and pos2 then
-		mcl_lightning.strike_func(pos, pos2, core.get_objects_inside_radius (pos2, 3.5), for_trap)
+		mcl_lightning.strike_func(pos, pos2, core.get_objects_inside_radius (pos2, 3.5, dim), for_trap)
 	end
 end
 
@@ -235,7 +241,7 @@ core.register_chatcommand("lightning", {
 		if pos then
 			mcl_lightning.strike(pos)
 		elseif player_to_strike then
-			mcl_lightning.strike(player_to_strike:get_pos())
+			mcl_lightning.strike(player_to_strike:get_pos(), nil, player_to_strike:get_dimension())
 		end
 		return true
 	end,

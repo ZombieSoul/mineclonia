@@ -25,8 +25,8 @@ local function add_lingering_effects (pos, color, effects, is_water, texture,
 			 effects = effects,
 			 texture = texture,
 			 initial_radius = initial_radius,
-			 -- The next three fields are only material that
-			 custom_effect is set.
+			 -- The next three fields are only material if
+			 -- custom_effect is set.
 			 custom_effect = custom_effect,
 			 level = (potency
 				  and potency_to_level (potency)),

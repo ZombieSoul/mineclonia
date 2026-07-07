@@ -312,7 +312,7 @@ end
 local function call_init(pos, dim)
 	local node = core.get_node(pos, dim)
 	if init_tab[node.name] then
-		local ret = init_tab[node.name](pos, node)
+		local ret = init_tab[node.name](pos, node, dim)
 		if ret then
 			schedule_update(pos, ret, dim)
 		end
@@ -322,7 +322,7 @@ end
 function mcl_redstone._call_update(pos, dim)
 	local node = core.get_node(pos, dim)
 	if update_tab[node.name] then
-		local ret = update_tab[node.name](pos, node)
+		local ret = update_tab[node.name](pos, node, dim)
 		if ret then
 			schedule_update(pos, ret, dim)
 		end

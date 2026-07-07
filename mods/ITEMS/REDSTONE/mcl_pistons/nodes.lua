@@ -48,14 +48,14 @@ local function piston_remove_base(pos, oldnode)
 	end
 end
 
-local function piston_on(pos, node)
+local function piston_on(pos, node, dim)
 	local pistonspec = core.registered_nodes[node.name]._piston_spec
 
 	local dir = -core.facedir_to_dir(node.param2)
 	local np = vector.add(pos, dir)
 	local meta = core.get_meta(pos)
 
-	local objects = core.get_objects_inside_radius(np, 0.9)
+	local objects = core.get_objects_inside_radius(np, 0.9, dim)
 	for _, obj in ipairs(objects) do
 		if vector.equals(obj:get_pos():round(), np) then
 			local l = obj:get_luaentity()
@@ -65,7 +65,7 @@ local function piston_on(pos, node)
 		end
 	end
 
-	local objects = core.get_objects_inside_radius(pos, 0.9)
+	local objects = core.get_objects_inside_radius(pos, 0.9, dim)
 	for _, obj in ipairs(objects) do
 		if vector.equals(obj:get_pos():round(), pos) then
 			local l = obj:get_luaentity()
@@ -75,13 +75,13 @@ local function piston_on(pos, node)
 		end
 	end
 
-	local success = mcl_pistons.push(np, dir, PISTON_MAXIMUM_PUSH, meta:get_string("owner"), pos)
+	local success = mcl_pistons.push(np, dir, PISTON_MAXIMUM_PUSH, meta:get_string("owner"), pos, dim)
 	if success then
-		core.swap_node(pos, {param2 = node.param2, name = pistonspec.onname})
-		core.set_node(np, {param2 = node.param2, name = pistonspec.pusher})
-		local below = core.get_node({x=np.x,y=np.y-1,z=np.z})
+		core.swap_node(pos, {param2 = node.param2, name = pistonspec.onname}, dim)
+		core.set_node(np, {param2 = node.param2, name = pistonspec.pusher}, dim)
+		local below = core.get_node({x=np.x,y=np.y-1,z=np.z}, dim)
 		if below.name == "mcl_farming:soil" or below.name == "mcl_farming:soil_wet" then
-			core.set_node({x=np.x,y=np.y-1,z=np.z}, {name = "mcl_core:dirt"})
+			core.set_node({x=np.x,y=np.y-1,z=np.z}, {name = "mcl_core:dirt"}, dim)
 		end
 		core.sound_play("piston_extend", {
 			pos = pos,
@@ -91,9 +91,9 @@ local function piston_on(pos, node)
 	end
 end
 
-local function piston_off(pos, node, detach)
+local function piston_off(pos, node, detach, dim)
 	local pistonspec = core.registered_nodes[node.name]._piston_spec
-	core.swap_node(pos, {param2 = node.param2, name = pistonspec.offname})
+	core.swap_node(pos, {param2 = node.param2, name = pistonspec.offname}, dim)
 	piston_remove_pusher(pos, node)
 	if not pistonspec.sticky or detach then
 		return
@@ -101,9 +101,9 @@ local function piston_off(pos, node, detach)
 
 	local dir = -core.facedir_to_dir(node.param2)
 	local pullpos = vector.add(pos, vector.multiply(dir, 2))
-	if core.get_item_group(core.get_node(pullpos).name, "unsticky") == 0 then
+	if core.get_item_group(core.get_node(pullpos, dim).name, "unsticky") == 0 then
 		local meta = core.get_meta(pos)
-		mcl_pistons.push(pullpos, vector.multiply(dir, -1), PISTON_MAXIMUM_PUSH, meta:get_string("owner"), pos)
+		mcl_pistons.push(pullpos, vector.multiply(dir, -1), PISTON_MAXIMUM_PUSH, meta:get_string("owner"), pos, dim)
 	end
 end
 
@@ -163,13 +163,13 @@ local pistonspec_normal = {
 
 local usagehelp_piston = S("This block can have one of 6 possible orientations.")
 
-local function powered_facing_dir(pos, dir)
-	return (dir.x ~= 1 and mcl_redstone.get_power(pos, vector.new(1, 0, 0)) ~= 0) or
-		(dir.x ~= -1 and mcl_redstone.get_power(pos, vector.new(-1, 0, 0)) ~= 0) or
-		(dir.y ~= 1 and mcl_redstone.get_power(pos, vector.new(0, 1, 0)) ~= 0) or
-		(dir.y ~= -1 and mcl_redstone.get_power(pos, vector.new(0, -1, 0)) ~= 0) or
-		(dir.z ~= 1 and mcl_redstone.get_power(pos, vector.new(0, 0, 1)) ~= 0) or
-		(dir.z ~= -1 and mcl_redstone.get_power(pos, vector.new(0, 0, -1)) ~= 0)
+local function powered_facing_dir(pos, dir, dim)
+	return (dir.x ~= 1 and mcl_redstone.get_power(pos, vector.new(1, 0, 0), nil, dim) ~= 0) or
+		(dir.x ~= -1 and mcl_redstone.get_power(pos, vector.new(-1, 0, 0), nil, dim) ~= 0) or
+		(dir.y ~= 1 and mcl_redstone.get_power(pos, vector.new(0, 1, 0), nil, dim) ~= 0) or
+		(dir.y ~= -1 and mcl_redstone.get_power(pos, vector.new(0, -1, 0), nil, dim) ~= 0) or
+		(dir.z ~= 1 and mcl_redstone.get_power(pos, vector.new(0, 0, 1), nil, dim) ~= 0) or
+		(dir.z ~= -1 and mcl_redstone.get_power(pos, vector.new(0, 0, -1), nil, dim) ~= 0)
 end
 
 local commdef = {
@@ -198,12 +198,12 @@ local offdef = {
 		connects_to = function(node, dir)
 			return -core.facedir_to_dir(node.param2) ~= dir
 		end,
-		update = function(pos, node)
+		update = function(pos, node, dim)
 			local dir = -core.facedir_to_dir(node.param2)
-			if powered_facing_dir(pos, dir) then
+			if powered_facing_dir(pos, dir, dim) then
 
 				if ONE_TICK_DETACH then
-					local frontnode = core.get_node(vector.add(pos, dir))
+					local frontnode = core.get_node(vector.add(pos, dir), dim)
 					local frontdef  = core.registered_nodes[frontnode.name]
 					local h         = core.hash_node_position(pos)
 					-- Only detach if we pushed a block when extending
@@ -211,10 +211,10 @@ local offdef = {
 				end
 
 				mcl_redstone.after(1, function()
-					if core.get_node(pos).name == node.name then
-						piston_on(pos, node)
+					if core.get_node(pos, dim).name == node.name then
+						piston_on(pos, node, dim)
 						-- Needed because piston_on sets piston node without triggering on_construct/after_destruct.
-						mcl_redstone._notify_observer_neighbours(pos)
+						mcl_redstone._notify_observer_neighbours(pos, dim)
 					end
 				end)
 			end
@@ -233,9 +233,9 @@ local ondef = {
 		connects_to = function(node, dir)
 			return -core.facedir_to_dir(node.param2) ~= dir
 		end,
-		update = function(pos, node)
+		update = function(pos, node, dim)
 			local dir = -core.facedir_to_dir(node.param2)
-			if not powered_facing_dir(pos, dir) then
+			if not powered_facing_dir(pos, dir, dim) then
 
 				local detach = false
 				if ONE_TICK_DETACH then
@@ -246,10 +246,10 @@ local ondef = {
 				end
 
 				mcl_redstone.after(1, function()
-					if core.get_node(pos).name == node.name then
-						piston_off(pos, node, detach)
+					if core.get_node(pos, dim).name == node.name then
+						piston_off(pos, node, detach, dim)
 						-- Needed because piston_off sets piston node without triggering on_construct/after_destruct.
-						mcl_redstone._notify_observer_neighbours(pos)
+						mcl_redstone._notify_observer_neighbours(pos, dim)
 					end
 				end)
 			end

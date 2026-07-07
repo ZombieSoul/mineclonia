@@ -7,12 +7,12 @@ local SOUND_PARMS = {
 	max_hear_distance = 150,
 }
 
-function mcl_bells.ring_internal (pos)
+function mcl_bells.ring_internal (pos, dim)
 	local alarm_time = core.get_gametime ()
 
 	SOUND_PARMS.pos = pos
 	core.sound_play ("mcl_bells_bell_stroke", SOUND_PARMS)
-	for o in core.objects_inside_radius(pos, 32) do
+	for o in core.objects_inside_radius(pos, 32, dim) do
 		local entity = o:get_luaentity()
 		if entity and entity.name == "mobs_mc:villager" then
 			entity._last_alarm_gmt = alarm_time
@@ -29,10 +29,10 @@ end
 
 local find_or_create_entity
 
-function mcl_bells.ring_once (pos, node)
+function mcl_bells.ring_once (pos, node, dim)
 	local node = node or core.get_node (pos)
 	local entity = find_or_create_entity (pos, node)
-	mcl_bells.ring_internal (pos)
+	mcl_bells.ring_internal (pos, dim)
 	if entity then
 		entity:ring ()
 	end
@@ -139,11 +139,11 @@ local bell_def = {
 		connects_to = function(node, dir)
 			return true
 		end,
-		update = function(pos, node)
-			local powered = mcl_redstone.get_power(pos) ~= 0
+		update = function(pos, node, dim)
+			local powered = mcl_redstone.get_power(pos, nil, nil, dim) ~= 0
 			local old_powered = bit.band(node.param2, 128) ~= 0
 			if powered and not old_powered then
-				mcl_bells.ring_once(pos, node)
+				mcl_bells.ring_once(pos, node, dim)
 			end
 			return {
 				name = node.name,

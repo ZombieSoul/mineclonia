@@ -19,9 +19,9 @@ function mcl_pistons.register_on_move(callback)
 	table.insert(mcl_pistons.registered_on_move, callback)
 end
 
-local function run_on_mcl_piston_move(moved_nodes)
+local function run_on_mcl_piston_move(moved_nodes, dim)
 	for _, callback in ipairs(mcl_pistons.registered_on_move) do
-		callback(moved_nodes)
+		callback(moved_nodes, dim)
 	end
 end
 
@@ -30,7 +30,7 @@ end
 -- maximum: maximum nodes to be pushed
 -- player_name: player who is moving the block
 -- piston_pos: position of the piston
-function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
+function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos, dim)
 	-- table containing nodes to be moved, has the following format:
 	-- pos: position after being moved
 	-- old_pos: position before being moved
@@ -45,10 +45,10 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 
 	while #frontiers > 0 do
 		local np = frontiers[1]
-		local nn = core.get_node(np)
+		local nn = core.get_node(np, dim)
 		if nn.name == "ignore" then
 			core.get_voxel_manip():read_from_map(np, np)
-			nn = core.get_node(np)
+			nn = core.get_node(np, dim)
 		end
 
 		-- Abort if trying to push an unmovable block. The piston itself counts as unmovable.
@@ -82,7 +82,7 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 					-- when pushing a sticky block, push all applicable blocks with it
 					for _, dir in pairs(sixdirs) do
 						offset_pos = np:add(dir:multiply(-1))
-						offset_node = core.get_node(offset_pos)
+						offset_node = core.get_node(offset_pos, dim)
 						is_connected = def._mcl_pistons_sticky(nn, offset_node, dir)
 
 						-- Only insert connected node if it is movable and can stick to current node.
@@ -127,11 +127,11 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 	-- dig all nodes
 	for id, n in ipairs(dig_nodes) do
 		-- if current node has already been destroyed (e.g. chain reaction of sugar cane breaking), skip it
-		if core.get_node(n.old_pos).name == n.node.name then
+		if core.get_node(n.old_pos, dim).name == n.node.name then
 			local def = core.registered_nodes[n.node.name]
 			if def then
 				def.on_dig(n.old_pos, n.node) --no need to check if it exists since all nodes have this via metatable (defaulting to core.node_dig which will handle drops)
-				core.remove_node(n.old_pos)
+				core.remove_node(n.old_pos, dim)
 			end
 		end
 	end
@@ -139,7 +139,7 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 	-- remove old nodes that are about to be pushed
 	for id, n in ipairs(nodes) do
 		n.meta = core.get_meta(n.old_pos) and core.get_meta(n.old_pos):to_table()
-		core.remove_node(n.old_pos)
+		core.remove_node(n.old_pos, dim)
 		local node_timer = core.get_node_timer(n.old_pos)
 		if node_timer:is_started() then
 			n.node_timer = {node_timer:get_timeout(), node_timer:get_elapsed()}
@@ -149,7 +149,7 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 	-- add nodes after being pushed
 	for id, n in ipairs(nodes) do
 		-- local np = newpos[id]
-		core.set_node(n.pos, n.node)
+		core.set_node(n.pos, n.node, dim)
 		if n.meta then
 			core.get_meta(n.pos):from_table(n.meta)
 		end
@@ -167,7 +167,7 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 		local player = obj:is_player()
 		if (entity or player) and not (entity and core.registered_entities[entity.name]._mcl_pistons_unmovable) then
 			local new_pos = obj:get_pos():add(movedir)
-			local def = core.registered_nodes[core.get_node(new_pos).name]
+			local def = core.registered_nodes[core.get_node(new_pos, dim).name]
 			if def and def.walkable then
 				return
 			end
@@ -217,7 +217,7 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 		if not processed[h] then
 			processed[h] = true
 
-			local objects = core.get_objects_inside_radius(p.pos, 0.9)
+			local objects = core.get_objects_inside_radius(p.pos, 0.9, dim)
 			for _, obj in ipairs(objects) do
 				if not moved_objects[obj] then
 					move_object(obj, p.node, p.is_pulled)
@@ -227,17 +227,17 @@ function mcl_pistons.push(pos, movedir, maximum, player_name, piston_pos)
 		end
 	end
 
-	run_on_mcl_piston_move(nodes)
+	run_on_mcl_piston_move(nodes, dim)
 
 	return true
 end
 
-mcl_pistons.register_on_move(function(moved_nodes)
+mcl_pistons.register_on_move(function(moved_nodes, dim)
 	for i = 1, #moved_nodes do
 		local moved_node = moved_nodes[i]
 		core.after(0, function()
-			core.check_for_falling(moved_node.old_pos)
-			core.check_for_falling(moved_node.pos)
+			core.check_for_falling(moved_node.old_pos, dim)
+			core.check_for_falling(moved_node.pos, dim)
 		end)
 
 		-- Callback for on_move stored in nodedef

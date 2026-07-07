@@ -61,8 +61,8 @@ local function drop(pos, droppos, dropitem, inv, stack_)
 	end
 end
 
-local function activate_dropper(pos, droppos, dropdir, inv, stack_)
-	local dropnode = core.get_node(droppos)
+local function activate_dropper(pos, droppos, dropdir, inv, stack_, dim)
+	local dropnode = core.get_node(droppos, dim)
 	local dropitem = ItemStack(stack_.stack)
 	dropitem:set_count(1)
 
@@ -73,9 +73,9 @@ local function activate_dropper(pos, droppos, dropdir, inv, stack_)
 	mcl_redstone.update_comparators(pos)
 end
 
-local function activate_dispenser(pos, droppos, dropdir, inv, stack_)
-	local node = core.get_node(pos)
-	local dropnode = core.get_node(droppos)
+local function activate_dispenser(pos, droppos, dropdir, inv, stack_, dim)
+	local node = core.get_node(pos, dim)
+	local dropnode = core.get_node(droppos, dim)
 	local dropnodedef = core.registered_nodes[dropnode.name]
 	local dropitem = ItemStack(stack_.stack)
 	dropitem:set_count(1)
@@ -90,7 +90,7 @@ local function activate_dispenser(pos, droppos, dropdir, inv, stack_)
 	local igroups = stackdef.groups
 
 	-- Dispense item on luaentity
-	for obj in core.objects_inside_radius(droppos, 1) do
+	for obj in core.objects_inside_radius(droppos, 1, dim) do
 		local ent = obj:get_luaentity()
 		if ent and ent._on_dispense then
 			local pos = obj:get_pos()
@@ -105,8 +105,8 @@ local function activate_dispenser(pos, droppos, dropdir, inv, stack_)
 
 	if igroups.armor then -- Armor, mob heads and pumpkins
 		local droppos_below = vector.offset(droppos, 0, -1, 0)
-		for _, objs in ipairs({ core.get_objects_inside_radius(droppos, 1),
-			core.get_objects_inside_radius(droppos_below, 1) }) do
+		for _, objs in ipairs({ core.get_objects_inside_radius(droppos, 1, dim),
+			core.get_objects_inside_radius(droppos_below, 1, dim) }) do
 			for _, obj in ipairs(objs) do
 				stack = mcl_armor.equip(stack, obj)
 				if stack:is_empty() then
@@ -179,8 +179,8 @@ local function activate_dispenser(pos, droppos, dropdir, inv, stack_)
 	mcl_redstone.update_comparators(pos)
 end
 
-local function activate(pos, activate_func)
-	local node = core.get_node(pos)
+local function activate(pos, activate_func, dim)
+	local node = core.get_node(pos, dim)
 	local meta = core.get_meta(pos)
 	local inv = meta:get_inventory()
 	local droppos, dropdir
@@ -204,7 +204,7 @@ local function activate(pos, activate_func)
 	if #stacks >= 1 then
 		local r = math.random(1, #stacks)
 		local stack = stacks[r]
-		activate_func(pos, droppos, dropdir, inv, stack)
+		activate_func(pos, droppos, dropdir, inv, stack, dim)
 	end
 end
 
@@ -263,12 +263,12 @@ local commdef  = {
 		connects_to = function(node, dir)
 			return true
 		end,
-		update = function(pos, node)
+		update = function(pos, node, dim)
 			local oldpowered = math.floor(node.param2 / 32) ~= 0
-			local powered = mcl_redstone.get_power(pos) ~= 0
+			local powered = mcl_redstone.get_power(pos, nil, nil, dim) ~= 0
 			if powered and not oldpowered then
 				local is_dispenser = core.get_item_group(node.name, "dispenser") ~= 0
-				activate(pos, is_dispenser and activate_dispenser or activate_dropper)
+				activate(pos, is_dispenser and activate_dispenser or activate_dropper, dim)
 			end
 			return {
 				name = node.name,

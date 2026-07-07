@@ -178,10 +178,10 @@ local function propagate_golden_rail_power(pos, new_power, old_power, powered_on
 	vm:write_to_map(false)
 end
 
-local function push_minecart(pos)
+local function push_minecart(pos, dim)
 	local dir = mcl_minecarts:get_start_direction(pos)
 	if not dir then return end
-	for o in core.objects_inside_radius(pos, 1) do
+	for o in core.objects_inside_radius(pos, 1, dim) do
 		local l = o:get_luaentity()
 		local v = o:get_velocity()
 		if l and string.sub(l.name, 1, 14) == "mcl_minecarts:"
@@ -192,14 +192,14 @@ local function push_minecart(pos)
 	end
 end
 
-local function golden_rail_redstone_update(pos)
-	local oldpower = core.get_node(pos).param2
-	local newpower = mcl_redstone.get_power(pos) ~= 0 and 8 or 0
+local function golden_rail_redstone_update(pos, node, dim)
+	local oldpower = core.get_node(pos, dim).param2
+	local newpower = mcl_redstone.get_power(pos, nil, nil, dim) ~= 0 and 8 or 0
 	local powered_on = {}
 	propagate_golden_rail_power(pos, newpower, oldpower, powered_on)
 
 	for _, pos in pairs(powered_on) do
-		push_minecart(pos)
+		push_minecart(pos, dim)
 	end
 end
 
@@ -262,12 +262,12 @@ register_rail("mcl_minecarts:activator_rail_on",
 	{
 		_doc_items_create_entry = false,
 		_mcl_redstone = {
-			update = function(pos)
-				if mcl_redstone.get_power(pos) == 0 then
-					core.swap_node(pos, {name = "mcl_minecarts:activator_rail"})
+			update = function(pos, node, dim)
+				if mcl_redstone.get_power(pos, nil, nil, dim) == 0 then
+					core.swap_node(pos, {name = "mcl_minecarts:activator_rail"}, dim)
 				else
 					local pos2 = { x = pos.x, y =pos.y + 1, z = pos.z }
-					for o in core.objects_inside_radius(pos2, 1) do
+					for o in core.objects_inside_radius(pos2, 1, dim) do
 						local l = o:get_luaentity()
 						if l and string.sub(l.name, 1, 14) == "mcl_minecarts:" and l.on_activate_by_rail then
 							l:on_activate_by_rail()

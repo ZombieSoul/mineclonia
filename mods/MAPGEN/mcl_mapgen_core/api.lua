@@ -13,7 +13,7 @@ local function roundN(n, d)
     return math.floor(n * m + 0.5) / m
 end
 
-core.register_on_generated(function(minp, maxp, blockseed)
+core.register_on_generated(function(minp, maxp, blockseed, dim_name)
 	if mcl_levelgen.levelgen_enabled then
 		return
 	end

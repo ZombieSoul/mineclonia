@@ -98,7 +98,8 @@ function mcl_player.get_player_setting(player, name, default)
 	if not def then return nil end
 
 	local setting = SETTINGS_PREFIX .. name
-	local value = player:get_meta():get(setting)
+	local meta = player:get_meta()
+	local value = meta and meta:get(setting)
 	if value == nil then
 		return default
 	elseif def.type == "boolean" then

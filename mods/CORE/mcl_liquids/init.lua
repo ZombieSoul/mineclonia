@@ -290,10 +290,16 @@ local function register_liquid(def)
 	@param is_sinking If the liquid is only allowed to sink.
 
 	]]
-	local function update_next(x, y, z, map, is_sinking)
+	-- The dimension the current flow_iteration is operating in. Set by
+	-- liquid_tick before calling flow_iteration; read by update_next when
+	-- no explicit dim is passed (the propagation case). Liquids never cross
+	-- dimensions, so dim is constant across a single propagation.
+	local flow_dim
+
+	local function update_next(x, y, z, map, is_sinking, dim)
 		local h = hash_node_position(x, y, z)
 		if update_next_set[h] == nil then
-			update_next_set[h] = {map = map, is_sinking = is_sinking}
+			update_next_set[h] = {map = map, is_sinking = is_sinking, dim = dim or flow_dim}
 		end
 	end
 
@@ -809,13 +815,13 @@ local function register_liquid(def)
 		end
 	end
 
-	local function liquid_update(x, y, z)
-		update_next(x, y, z)
+	local function liquid_update(x, y, z, dim)
+		update_next(x, y, z, nil, nil, dim)
 	end
 
-	local function liquid_update_raw (poshash)
+	local function liquid_update_raw (poshash, dim)
 		local px, py, pz = get_position_from_hash (poshash)
-		update_next (px, py, pz)
+		update_next (px, py, pz, nil, nil, dim)
 	end
 
 	local function fix_ndef(ndef_name)
@@ -1123,11 +1129,11 @@ local function register_liquid(def)
 				local node = make_liquid(level)
 
 				if old_ndef.on_flood then
-					if not old_ndef.on_flood(pos, core.get_node(pos), node) then
-						core_set_node(pos, node)
+					if not old_ndef.on_flood(pos, core.get_node(pos, flow_dim), node) then
+						core_set_node(pos, node, flow_dim)
 					end
 				else
-					core_set_node(pos, node)
+					core_set_node(pos, node, flow_dim)
 				end
 			end
 		end
@@ -1161,6 +1167,9 @@ local function register_liquid(def)
 
 				for hpos, item in pairs(q) do
 					local x, y, z = get_position_from_hash(hpos)
+					-- Set the dimension context for this flow so propagated
+					-- update_next calls inherit it.
+					flow_dim = item.dim
 					-- Do the flow magic
 					flow_iteration(x, y, z, item.map, item.is_sinking)
 
@@ -1218,9 +1227,12 @@ end)
 
 
 -- This function notifies the registered liquids about a node that has changed.
+-- Called from node callbacks (on_flood, on_construct, etc.) which run inside
+-- a DimContextGuard, so core.get_current_dim() returns the node's dimension.
 local function liquid_update(pos)
+	local dim = core.get_current_dim()
 	for i, o in ipairs(registered_liquids) do
-		o.update(pos.x, pos.y, pos.z)
+		o.update(pos.x, pos.y, pos.z, dim)
 	end
 end
 
@@ -1318,22 +1330,22 @@ end)
 
 -- Override the set_node function so that it calls liquid_update() on every
 -- node change.
-core.set_node = function(pos, node)
-	core_set_node(pos, node);
+core.set_node = function(pos, node, dim)
+	core_set_node(pos, node, dim);
 	liquid_update(pos);
 end
 
 -- Override the add_node function so that it calls liquid_update() on every
 -- node change.
-core.add_node = function(pos, node)
-	core_add_node(pos, node)
+core.add_node = function(pos, node, dim)
+	core_add_node(pos, node, dim)
 	liquid_update(pos)
 end
 
 -- Override the bulk_set_node function so that it calls liquid_update() on every
 -- node change.
-core.bulk_set_node = function(positions, node)
-	core_bulk_set_node(positions, node)
+core.bulk_set_node = function(positions, node, dim)
+	core_bulk_set_node(positions, node, dim)
 	for _, p in ipairs(positions) do
 		liquid_update(p)
 	end
@@ -1341,8 +1353,8 @@ end
 
 -- Override the remove_node function so that it calls liquid_update() on every
 -- node change.
-core.remove_node = function(pos)
-	core_remove_node(pos)
+core.remove_node = function(pos, dim)
+	core_remove_node(pos, dim)
 	liquid_update(pos)
 end
 

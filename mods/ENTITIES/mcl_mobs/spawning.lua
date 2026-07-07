@@ -1,6 +1,12 @@
 local pairs = pairs
 local ipairs = ipairs
 
+-- The dimension the current spawn_cycle is operating in. Set at the top of
+-- spawn_cycle; read by the spawner methods (test_collision, spawn, etc.) so
+-- their get_node/add_entity calls target the right world. The spawn globalstep
+-- has no DimContextGuard, so without this, spawns would always target overworld.
+local current_spawn_dim
+
 --lua locals
 local mob_class = mcl_mobs.mob_class
 local is_valid = mcl_util.is_valid_objectref
@@ -328,7 +334,10 @@ local function collect_unique_chunks (level)
 		local pos = player:get_pos ()
 		local chunk_x = math.floor (pos.x / 16.0)
 		local chunk_z = math.floor (pos.z / 16.0)
-		local chunk_dim = mcl_worlds.pos_to_dimension (pos)
+		-- Use the engine's dimension model (player:get_dimension) rather
+		-- than the legacy Y-based mcl_worlds.pos_to_dimension, which is
+		-- wrong for the engine fork's isolated dimension maps.
+		local chunk_dim = player:get_dimension ()
 		players[player] = pos
 
 		if chunk_dim == level then
@@ -378,8 +387,9 @@ core.register_chatcommand("mobstats",{
 	privs = { debug = true },
 	func = function(n, _)
 		local mob_caps = {}
-		local pos = core.get_player_by_name (n):get_pos ()
-		local level = mcl_worlds.pos_to_dimension (pos)
+		local player = core.get_player_by_name (n)
+		local pos = player:get_pos ()
+		local level = player:get_dimension ()
 
 		if level == "void" then
 			local blurb = "No spawning data is available in the Void"
@@ -440,7 +450,7 @@ function mob_class:check_despawn_on_activation (self_pos)
 	-- permit?
 
 	if caps then
-		local level = mcl_worlds.pos_to_dimension (self_pos)
+		local level = core.get_current_dim ()
 		if level == "void" then
 			return false
 		end
@@ -751,6 +761,7 @@ local function unpack3 (x)
 end
 
 function mcl_mobs.spawn_cycle (level, chunks, n_chunks, spawn_animals)
+	current_spawn_dim = level
 	local scratch0 = vector.zero ()
 
 	-- Collect a list of chunks to evaluate for purposes of
@@ -1034,7 +1045,7 @@ function default_spawner:get_node (node_cache, y_offset, base)
 	local cache = node_cache[y_offset]
 	if not cache then
 		base.y = base.y + y_offset
-		cache = core.get_node (base)
+		cache = core.get_node (base, current_spawn_dim)
 		node_cache[y_offset] = cache
 		base.y = base.y - y_offset
 	end
@@ -1097,7 +1108,7 @@ local function box_intersection (box, other_box)
 end
 
 function default_spawner:test_collision (node, cbox)
-	local node_data = core.get_node (node)
+	local node_data = core.get_node (node, current_spawn_dim)
 	if node_data.name == "ignore" then
 		return true
 	end
@@ -1173,7 +1184,7 @@ end
 
 function default_spawner:spawn (spawn_pos, idx, sdata, pack_size)
 	local staticdata = sdata and core.serialize (sdata)
-	return core.add_entity (spawn_pos, self.name, staticdata)
+	return core.add_entity (spawn_pos, self.name, staticdata, current_spawn_dim)
 end
 
 function default_spawner:prepare_to_spawn (pack_size, center)

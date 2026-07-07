@@ -84,14 +84,14 @@ end
 --  weak:                soft powered. (i.e. activates components, doesn't power blocks.)
 --  strong:              hard powered, strong power
 --  weak_from_wire_only: hard powered, weak power. (doesn't power wire through blocks.)
-local function get_node_power(pos, include_wire)
+local function get_node_power(pos, include_wire, dim)
 	local weak = 0
 	local strong = 0
 	local weak_from_wire_only = 0
 
 	for i, dir in pairs(sixdirs) do
 		local pos2 = pos:add(dir)
-		local node2 = core.get_node(pos2)
+		local node2 = core.get_node(pos2, dim)
 
 		if get_power_tab[node2.name] then
 			local power, is_strong = get_power_tab[node2.name](node2, -dir)
@@ -111,14 +111,14 @@ local function get_node_power(pos, include_wire)
 end
 
 -- Get strong power from neighbours (including opaque nodes) at pos.
-local function get_node_power_2(pos)
-	local max = get_node_power(pos)
+local function get_node_power_2(pos, dim)
+	local max = get_node_power(pos, nil, dim)
 	for _, dir in pairs(sixdirs) do
 		local pos2 = pos:add(dir)
-		local node2 = core.get_node(pos2)
+		local node2 = core.get_node(pos2, dim)
 
 		if opaque_tab[node2.name] then
-			local _, power2 = get_node_power(pos2)
+			local _, power2 = get_node_power(pos2, nil, dim)
 			max = math.max(max, power2)
 		end
 	end
@@ -127,18 +127,21 @@ local function get_node_power_2(pos)
 end
 
 -- Set/add a position to mcl_redstone._pending_updates.
-local function set_pending_update(pos, node_name)
+-- `dim` is stored alongside `pos` so the globalstep-driven _call_update
+-- can target the right dimension. Redstone never crosses dimensions, so
+-- dim is constant across a single propagation.
+local function set_pending_update(pos, node_name, dim)
 	if node_name and not update_tab[node_name] then
 		return
 	end
-	mcl_redstone._pending_updates[core.hash_node_position(pos)] = pos
+	mcl_redstone._pending_updates[core.hash_node_position(pos)] = {pos = pos, dim = dim}
 end
 
 -- Propagate redstone power through wires. 'clear_queue' is a queue of events
 -- were power which is lowered/removed. 'fill_queue' is a queue of events were
 -- power is added/raised. 'update' is a table which gets populated with
 -- positions that should get redstone update events.
-local function propagate_wire(clear_nodes, fill_nodes, updates)
+local function propagate_wire(clear_nodes, fill_nodes, updates, dim)
 	local fill_queue = mcl_util.queue()
 	local clear_queue = mcl_util.queue()
 	local nodecache = {}
@@ -147,7 +150,7 @@ local function propagate_wire(clear_nodes, fill_nodes, updates)
 	local function get_node(pos)
 		local h = core.hash_node_position(pos)
 		if not nodecache[h] then
-			nodecache[h] = core.get_node(pos)
+			nodecache[h] = core.get_node(pos, dim)
 		end
 		return nodecache[h]
 	end
@@ -183,7 +186,7 @@ local function propagate_wire(clear_nodes, fill_nodes, updates)
 		local entry = clear_queue:dequeue()
 		local pos = entry.pos
 		local power = entry.power
-		local node = core.get_node(pos)
+		local node = core.get_node(pos, dim)
 
 		updates_[core.hash_node_position(pos)] = pos
 
@@ -222,12 +225,12 @@ local function propagate_wire(clear_nodes, fill_nodes, updates)
 		local power = entry.power
 		local power2 = power - 1
 
-		local nname = core.get_node(pos:subtract(vector.new(0, 1, 0))).name
+		local nname = core.get_node(pos:subtract(vector.new(0, 1, 0)), dim).name
 		local on_slab = mcl_redstone._slab_tab[nname] ~= nil
 
 		updates_[core.hash_node_position(pos)] = pos
 
-		for dir in iterate_wire_neighbours(wireflag_tab[core.get_node(pos).name]) do
+		for dir in iterate_wire_neighbours(wireflag_tab[core.get_node(pos, dim).name]) do
 			if not (on_slab and dir.wire.y < 0) and (not dir.obstruct or not opaque_tab[get_node(pos:add(dir.obstruct)).name]) then
 				local pos2 = pos:add(dir.wire)
 				local node2 = get_node(pos2)
@@ -242,10 +245,10 @@ local function propagate_wire(clear_nodes, fill_nodes, updates)
 	for hash, node in pairs(nodecache) do
 		if node.dirty then
 			local pos = core.get_position_from_hash(hash)
-			core.swap_node(pos, node)
+			core.swap_node(pos, node, dim)
 			-- Note: Observers might trigger despite no change in power level if
 			-- wire propagation were to swap a node just to change the upper bits in param2.
-			mcl_redstone._notify_observer_neighbours(pos)
+			mcl_redstone._notify_observer_neighbours(pos, dim)
 		end
 	end
 
@@ -253,20 +256,20 @@ local function propagate_wire(clear_nodes, fill_nodes, updates)
 		for _, dir in pairs(sixdirs) do
 			local pos2 = pos:add(dir)
 			local node2 = get_node(pos2)
-			set_pending_update(pos2, node2.name)
+			set_pending_update(pos2, node2.name, dim)
 
 			if opaque_tab[node2.name] then
 				for _, dir in pairs(sixdirs) do
 					local pos3 = pos2:add(dir)
 					local node3 = get_node(pos3)
-					set_pending_update(pos3, node3.name)
+					set_pending_update(pos3, node3.name, dim)
 				end
 			end
 		end
 	end
 end
 
-function mcl_redstone.get_power(pos, dir, option)
+function mcl_redstone.get_power(pos, dir, option, dim)
 	core.load_area(pos:subtract(2), pos:add(2))
 
 	-- Create table with keys corresponding to bits in wireflags to
@@ -281,7 +284,7 @@ function mcl_redstone.get_power(pos, dir, option)
 	local power = 0
 	for i, dir in pairs(dirs) do
 		local pos2 = pos:add(dir)
-		local node2 = core.get_node(pos2)
+		local node2 = core.get_node(pos2, dim)
 
 		if get_power_tab[node2.name] then
 			local power2 = get_power_tab[node2.name](node2, -dir)
@@ -289,7 +292,7 @@ function mcl_redstone.get_power(pos, dir, option)
 		elseif wireflag_tab[node2.name] and (i == 5 or check_bit(wireflag_tab[node2.name], i)) then
 			power = math.max(power, bit.band(node2.param2, 0xF))
 		elseif opaque_tab[node2.name] and option ~= "direct" then
-			local _, strong, weak_from_wire = get_node_power(pos2, true)
+			local _, strong, weak_from_wire = get_node_power(pos2, true, dim)
 			power = math.max(power, math.max(strong, weak_from_wire))
 		end
 	end
@@ -297,38 +300,38 @@ function mcl_redstone.get_power(pos, dir, option)
 	return power
 end
 
-local function schedule_update(pos, update)
+local function schedule_update(pos, update, dim)
 	local delay = update.delay or 1
 	local priority = update.priority or 1000
-	local oldnode = core.get_node(pos)
+	local oldnode = core.get_node(pos, dim)
 	update.param2 = update.param2 or 0
 
-	mcl_redstone._schedule_update(delay, priority, pos, update, oldnode)
+	mcl_redstone._schedule_update(delay, priority, pos, update, oldnode, dim)
 end
 
-local function call_init(pos)
-	local node = core.get_node(pos)
+local function call_init(pos, dim)
+	local node = core.get_node(pos, dim)
 	if init_tab[node.name] then
 		local ret = init_tab[node.name](pos, node)
 		if ret then
-			schedule_update(pos, ret)
+			schedule_update(pos, ret, dim)
 		end
 	end
 end
 
-function mcl_redstone._call_update(pos)
-	local node = core.get_node(pos)
+function mcl_redstone._call_update(pos, dim)
+	local node = core.get_node(pos, dim)
 	if update_tab[node.name] then
 		local ret = update_tab[node.name](pos, node)
 		if ret then
-			schedule_update(pos, ret)
+			schedule_update(pos, ret, dim)
 		end
 	end
 end
 
 -- TODO: A bit ugly, could be refactored.
-function mcl_redstone.update_node(pos)
-	set_pending_update(pos)
+function mcl_redstone.update_node(pos, dim)
+	set_pending_update(pos, nil, dim)
 end
 
 local function notify_observer(pos, node, from_pos)
@@ -338,41 +341,41 @@ local function notify_observer(pos, node, from_pos)
 end
 
 -- Update/notify neighbouring observing nodes at pos, aka "shape update".
-function mcl_redstone._notify_observer_neighbours(pos)
+function mcl_redstone._notify_observer_neighbours(pos, dim)
 	for _, dir in pairs(sixdirs) do
 		local pos2  = pos:add(dir)
-		local node2 = core.get_node(pos2)
+		local node2 = core.get_node(pos2, dim)
 		notify_observer(pos2, node2, pos)
 	end
 end
 
 -- Update components affected by a wire shape change at pos.
-function mcl_redstone._update_wire_shape_neighbours(pos)
+function mcl_redstone._update_wire_shape_neighbours(pos, dim)
 	for _, dir in pairs(sixdirs) do
 		local pos2 = pos:add(dir)
-		local node2 = core.get_node(pos2)
-		set_pending_update(pos2, node2.name)
+		local node2 = core.get_node(pos2, dim)
+		set_pending_update(pos2, node2.name, dim)
 
 		if opaque_tab[node2.name] then
 			for _, dir2 in pairs(sixdirs) do
 				local pos3 = pos2:add(dir2)
-				local node3 = core.get_node(pos3)
-				set_pending_update(pos3, node3.name)
+				local node3 = core.get_node(pos3, dim)
+				set_pending_update(pos3, node3.name, dim)
 			end
 		end
 	end
 
-	mcl_redstone._notify_observer_neighbours(pos)
+	mcl_redstone._notify_observer_neighbours(pos, dim)
 end
 
 -- Update neighbouring wires and components at pos. Oldnode is the previous
 -- node at the position.
-local function update_neighbours(pos, oldnode, newnode)
+local function update_neighbours(pos, oldnode, newnode, dim)
 	core.load_area(pos:subtract(20), pos:add(20))
 
 	local fill_nodes = {}
 	local clear_nodes = {}
-	local node = newnode or core.get_node(pos)
+	local node = newnode or core.get_node(pos, dim)
 	local ndef = core.registered_nodes[node.name]
 	local oldndef = oldnode and core.registered_nodes[oldnode.name]
 	local get_power = ndef and ndef._mcl_redstone and ndef._mcl_redstone.get_power
@@ -382,12 +385,12 @@ local function update_neighbours(pos, oldnode, newnode)
 		if oldpower then
 			table.insert(clear_nodes, {pos = pos, power = oldpower})
 		end
-		local power = get_node_power_2(pos)
+		local power = get_node_power_2(pos, dim)
 
 		table.insert(fill_nodes, {pos = pos, power = power})
 	end
 
-	set_pending_update(pos, node.name)
+	set_pending_update(pos, node.name, dim)
 
 	if not (get_power or old_get_power) then return end
 
@@ -397,16 +400,16 @@ local function update_neighbours(pos, oldnode, newnode)
 		local oldpower2 = old_get_power and old_get_power(oldnode, dir) or 0
 
 		if power2 ~= oldpower2 then
-			local node2 = core.get_node(pos2)
-			set_pending_update(pos2, node2.name)
+			local node2 = core.get_node(pos2, dim)
+			set_pending_update(pos2, node2.name, dim)
 
 			if wireflag_tab[node2.name] then
 				update_wire(pos2, oldpower2)
 			elseif opaque_tab[node2.name] then
 				for i, dir in pairs(sixdirs) do
 					local pos3 = pos2:add(dir)
-					local node3 = core.get_node(pos3)
-					set_pending_update(pos3, node3.name)
+					local node3 = core.get_node(pos3, dim)
+					set_pending_update(pos3, node3.name, dim)
 
 					if wireflag_tab[node3.name] then
 						update_wire(pos3, math.max(oldpower2, 0))
@@ -416,14 +419,14 @@ local function update_neighbours(pos, oldnode, newnode)
 		end
 	end
 
-	propagate_wire(clear_nodes, fill_nodes)
+	propagate_wire(clear_nodes, fill_nodes, nil, dim)
 end
 
 -- Piston pusher nodes calls this during init to avoid circuits stopping if a
 -- piston was extended just before a server restart. It is not a clean solution
 -- but it works.
-function mcl_redstone._update_neighbours(pos, oldnode, newnode)
-	update_neighbours(pos, oldnode, newnode)
+function mcl_redstone._update_neighbours(pos, oldnode, newnode, dim)
+	update_neighbours(pos, oldnode, newnode, dim)
 	if  (oldnode and action_tab[oldnode.name])
 			or (newnode and action_tab[newnode.name]) then
 		local callbacks = {}
@@ -441,20 +444,20 @@ function mcl_redstone._update_neighbours(pos, oldnode, newnode)
 	end
 end
 
-function mcl_redstone.swap_node(pos, node)
-	local oldnode = core.get_node(pos)
+function mcl_redstone.swap_node(pos, node, dim)
+	local oldnode = core.get_node(pos, dim)
 	if not node then print(debug.traceback("trying to place nil")) end
-	core.swap_node(pos, node)
-	mcl_redstone._update_neighbours(pos, oldnode, node)
+	core.swap_node(pos, node, dim)
+	mcl_redstone._update_neighbours(pos, oldnode, node, dim)
 end
 
-local function opaque_update_neighbours(pos, update_observers)
+local function opaque_update_neighbours(pos, update_observers, dim)
 	local fill_nodes = {}
 	local clear_nodes = {}
 
 	local function update_wire(pos)
-		local oldpower = bit.band(core.get_node(pos).param2, 0xF)
-		local power = get_node_power_2(pos)
+		local oldpower = bit.band(core.get_node(pos, dim).param2, 0xF)
+		local power = get_node_power_2(pos, dim)
 
 		table.insert(clear_nodes, {pos = pos, power = oldpower})
 		table.insert(fill_nodes, {pos = pos, power = power})
@@ -462,11 +465,11 @@ local function opaque_update_neighbours(pos, update_observers)
 
 	for _, dir in pairs(sixdirs) do
 		local pos2 = pos:add(dir)
-		local node2 = core.get_node(pos2)
+		local node2 = core.get_node(pos2, dim)
 		if wireflag_tab[node2.name] then
 			update_wire(pos2)
 		elseif update_tab[node2.name] then
-			set_pending_update(pos2, node2.name)
+			set_pending_update(pos2, node2.name, dim)
 		end
 
 		if update_observers then
@@ -474,24 +477,29 @@ local function opaque_update_neighbours(pos, update_observers)
 		end
 	end
 
-	propagate_wire(clear_nodes, fill_nodes)
+	propagate_wire(clear_nodes, fill_nodes, nil, dim)
 end
 
-local function update_wire(pos, oldnode)
+local function update_wire(pos, oldnode, dim)
 	local fill_nodes = {}
 	local clear_nodes = {}
-	local node = core.get_node(pos)
-	local power = get_node_power_2(pos)
+	local node = core.get_node(pos, dim)
+	local power = get_node_power_2(pos, dim)
 
 	table.insert(clear_nodes, {pos = pos, power = oldnode and oldnode.param2 or 0})
 	if wireflag_tab[node.name] then
 		table.insert(fill_nodes, {pos = pos, power = power})
 	end
 
-	propagate_wire(clear_nodes, fill_nodes)
+	propagate_wire(clear_nodes, fill_nodes, nil, dim)
 end
 
 -- Override nodes to perform redstone updates on changes.
+-- These on_construct/after_destruct callbacks run inside the engine's
+-- DimContextGuard (pushed for node callbacks), so core.get_current_dim()
+-- returns the dimension the node is in. We capture it here and close over
+-- it in the mcl_redstone.after(...) bodies, because those bodies run later
+-- inside the redstone globalstep with no DimContextGuard.
 core.register_on_mods_loaded(function()
 	for name, ndef in pairs(core.registered_nodes) do
 		local old_construct = ndef.on_construct
@@ -499,21 +507,23 @@ core.register_on_mods_loaded(function()
 		if opaque_tab[name] then
 			core.override_item(name, {
 				on_construct = function(pos)
+					local dim = core.get_current_dim()
 					if old_construct then
 						old_construct(pos)
 					end
-					mcl_redstone._update_opaque_connections(pos)
+					mcl_redstone._update_opaque_connections(pos, dim)
 					mcl_redstone.after(0, function()
-						opaque_update_neighbours(pos, true) -- also notifies observers
+						opaque_update_neighbours(pos, true, dim) -- also notifies observers
 					end)
 				end,
 				after_destruct = function(pos, oldnode)
+					local dim = core.get_current_dim()
 					if old_destruct then
 						old_destruct(pos, oldnode)
 					end
-					mcl_redstone._update_opaque_connections(pos)
+					mcl_redstone._update_opaque_connections(pos, dim)
 					mcl_redstone.after(0, function()
-						opaque_update_neighbours(pos, true) -- also notifies observers
+						opaque_update_neighbours(pos, true, dim) -- also notifies observers
 					end)
 				end,
 			})
@@ -521,19 +531,21 @@ core.register_on_mods_loaded(function()
 		and name ~= "air" then
 			core.override_item(name, {
 				on_construct = function(pos)
+					local dim = core.get_current_dim()
 					if old_construct then
 						old_construct(pos)
 					end
 					mcl_redstone.after(0, function()
-						mcl_redstone._notify_observer_neighbours(pos)
+						mcl_redstone._notify_observer_neighbours(pos, dim)
 					end)
 				end,
 				after_destruct = function(pos, oldnode)
+					local dim = core.get_current_dim()
 					if old_destruct then
 						old_destruct(pos, oldnode)
 					end
 					mcl_redstone.after(0, function()
-						mcl_redstone._notify_observer_neighbours(pos)
+						mcl_redstone._notify_observer_neighbours(pos, dim)
 					end)
 				end,
 			})
@@ -544,21 +556,23 @@ core.register_on_mods_loaded(function()
 			local old_destruct = ndef.after_destruct
 			core.override_item(name, {
 				on_construct = function(pos)
+					local dim = core.get_current_dim()
 					if old_construct then
 						old_construct(pos)
 					end
-					update_wire(pos)
+					update_wire(pos, nil, dim)
 					mcl_redstone.after(0, function()
-						mcl_redstone._notify_observer_neighbours(pos)
+						mcl_redstone._notify_observer_neighbours(pos, dim)
 					end)
 				end,
 				after_destruct = function(pos, oldnode)
+					local dim = core.get_current_dim()
 					if old_destruct then
 						old_destruct(pos, oldnode)
 					end
-					update_wire(pos, oldnode)
+					update_wire(pos, oldnode, dim)
 					mcl_redstone.after(0, function()
-						mcl_redstone._notify_observer_neighbours(pos)
+						mcl_redstone._notify_observer_neighbours(pos, dim)
 					end)
 				end,
 			})
@@ -580,51 +594,53 @@ core.register_on_mods_loaded(function()
 					redstone_get_power = ndef._mcl_redstone.get_power and 1,
 				}),
 				on_construct = function(pos)
+					local dim = core.get_current_dim()
 					if old_construct then
 						old_construct(pos)
 					end
 					if ndef._mcl_redstone.connects_to then
-						mcl_redstone._connect_with_wires(pos)
+						mcl_redstone._connect_with_wires(pos, dim)
 					end
 					if is_opaque then
-						mcl_redstone._update_opaque_connections(pos)
+						mcl_redstone._update_opaque_connections(pos, dim)
 					end
 					mcl_redstone._abort_pending_update(pos)
 					mcl_redstone.after(0, function()
 						if init then
-							call_init(pos)
+							call_init(pos, dim)
 						end
 						if is_opaque then
-							opaque_update_neighbours(pos, false)
+							opaque_update_neighbours(pos, false, dim)
 						end
 						if ndef._mcl_redstone.get_power then
-							update_neighbours(pos)
+							update_neighbours(pos, nil, nil, dim)
 						end
-						mcl_redstone._notify_observer_neighbours(pos)
+						mcl_redstone._notify_observer_neighbours(pos, dim)
 					end)
 				end,
 				after_destruct = function(pos, oldnode)
+					local dim = core.get_current_dim()
 					if old_destruct then
 						old_destruct(pos, oldnode)
 					end
 					if ndef._mcl_redstone.connects_to then
-						mcl_redstone._connect_with_wires(pos)
+						mcl_redstone._connect_with_wires(pos, dim)
 					end
 					if is_opaque then
-						mcl_redstone._update_opaque_connections(pos)
+						mcl_redstone._update_opaque_connections(pos, dim)
 					end
 					if ndef._mcl_redstone.get_power then
 						mcl_redstone._abort_pending_update(pos)
 						mcl_redstone.after(0, function()
 							if is_opaque then
-								opaque_update_neighbours(pos, false)
+								opaque_update_neighbours(pos, false, dim)
 							end
-							update_neighbours(pos, oldnode)
-							mcl_redstone._notify_observer_neighbours(pos)
+							update_neighbours(pos, oldnode, nil, dim)
+							mcl_redstone._notify_observer_neighbours(pos, dim)
 						end)
 					else
 						mcl_redstone.after(0, function()
-							mcl_redstone._notify_observer_neighbours(pos)
+							mcl_redstone._notify_observer_neighbours(pos, dim)
 						end)
 					end
 				end,
@@ -633,13 +649,16 @@ core.register_on_mods_loaded(function()
 	end
 end)
 
+-- LBMs run per-dimension with a DimContextGuard pushed by the engine, so
+-- core.get_current_dim() returns the dimension the block is in.
 core.register_lbm({
 	label = "Perform redstone node initialization",
 	name = "mcl_redstone:update",
 	nodenames = {"group:redstone_init"},
 	run_at_every_load = true,
 	action = function(pos, node, dtime)
-		call_init(pos)
+		local dim = core.get_current_dim()
+		call_init(pos, dim)
 	end,
 })
 
@@ -649,6 +668,7 @@ core.register_lbm({
 	nodenames = {"group:redstone_get_power"},
 	run_at_every_load = true,
 	action = function(pos, node, dtime)
-		update_neighbours(pos)
+		local dim = core.get_current_dim()
+		update_neighbours(pos, nil, nil, dim)
 	end,
 })

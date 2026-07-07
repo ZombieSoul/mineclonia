@@ -72,7 +72,7 @@ local function updated_wire_name(node, wireflags)
 end
 
 -- Update connections for wire at position.
-local function update_wire(pos)
+local function update_wire(pos, dim)
 	local update_tab = {
 		{ wire = vector.new(0, -1, -1), obstruct = vector.new(0, 0, -1), mask = 0x1 },
 		{ wire = vector.new(-1, -1, 0), obstruct = vector.new(-1, 0, 0), mask = 0x2 },
@@ -94,7 +94,7 @@ local function update_wire(pos)
 		{ dir = vector.new(1, 0, 0), mask = 0x8 },
 	}
 
-	local node = core.get_node(pos)
+	local node = core.get_node(pos, dim)
 	local present = wireflag_tab[node.name] ~= nil
 	local wireflags = 0
 
@@ -103,9 +103,9 @@ local function update_wire(pos)
 		local obstruct = (wire.y < 0 and wire:multiply(vector.new(1, 0, 1))) or
 			(wire.y > 0 and wire:multiply(vector.new(0, 1, 0))) or
 			nil
-		if not obstruct or not opaque_tab[core.get_node(pos:add(obstruct)).name] then
+		if not obstruct or not opaque_tab[core.get_node(pos:add(obstruct), dim).name] then
 			local pos2 = pos:add(wire)
-			local node2 = core.get_node(pos2)
+			local node2 = core.get_node(pos2, dim)
 
 			if wireflag_tab[node2.name] then
 				wireflags = bit.bor(wireflags, entry.mask)
@@ -114,7 +114,7 @@ local function update_wire(pos)
 	end
 	for _, entry in pairs(fourdir_tab) do
 		local pos2 = pos:add(entry.dir)
-		local node2 = core.get_node(pos2)
+		local node2 = core.get_node(pos2, dim)
 		local ndef2 = core.registered_nodes[node2.name]
 		if ndef2 then
 			local redstone = ndef2._mcl_redstone
@@ -130,11 +130,11 @@ local function update_wire(pos)
 		core.swap_node(pos, {
 			name = updated_wire_name(node, wireflags),
 			param2 = node.param2,
-		})
+		}, dim)
 	end
 end
 
-function mcl_redstone._update_opaque_connections(pos)
+function mcl_redstone._update_opaque_connections(pos, dim)
 	local dirs = {
 		vector.new(0, -1, 0),
 		vector.new(1, 0, 0),
@@ -144,13 +144,13 @@ function mcl_redstone._update_opaque_connections(pos)
 	}
 	for _, dir in pairs(dirs) do
 		local pos2 = pos:add(dir)
-		if wireflag_tab[core.get_node(pos2).name] then
-			update_wire(pos2)
+		if wireflag_tab[core.get_node(pos2, dim).name] then
+			update_wire(pos2, dim)
 		end
 	end
 end
 
-local function update_wire_connections(pos)
+local function update_wire_connections(pos, dim)
 	local dirs = {
 		vector.new(0, 0, 0),
 		vector.new(1, 0, 0),
@@ -168,8 +168,8 @@ local function update_wire_connections(pos)
 	}
 	for _, dir in pairs(dirs) do
 		local pos2 = pos:add(dir)
-		if wireflag_tab[core.get_node(pos2).name] then
-			update_wire(pos2)
+		if wireflag_tab[core.get_node(pos2, dim).name] then
+			update_wire(pos2, dim)
 		end
 	end
 end
@@ -232,19 +232,21 @@ do
 		local on_rightclick
 		if wire == 0 then
 			on_rightclick = function(pos)
+				local dim = core.get_current_dim()
 				core.swap_node(pos, {
 					name = "mcl_redstone:wire_0f",
-					param2 = core.get_node(pos).param2,
-				})
-				mcl_redstone._update_wire_shape_neighbours(pos)
+					param2 = core.get_node(pos, dim).param2,
+				}, dim)
+				mcl_redstone._update_wire_shape_neighbours(pos, dim)
 			end
 		elseif bit.band(wire, 0xf) == 0xf then
 			on_rightclick = function(pos)
+				local dim = core.get_current_dim()
 				core.swap_node(pos, {
 					name = "mcl_redstone:redstone",
-					param2 = core.get_node(pos).param2,
-				})
-				mcl_redstone._update_wire_shape_neighbours(pos)
+					param2 = core.get_node(pos, dim).param2,
+				}, dim)
+				mcl_redstone._update_wire_shape_neighbours(pos, dim)
 			end
 		end
 
@@ -273,10 +275,12 @@ do
 			wield_image = wire == 0 and "redstone_redstone_dust.png" or nil,
 			inventory_image = wire == 0 and "redstone_redstone_dust.png" or nil,
 			on_construct = function(pos)
-				update_wire_connections(pos)
+				local dim = core.get_current_dim()
+				update_wire_connections(pos, dim)
 			end,
 			after_destruct = function(pos, oldnode)
-				update_wire_connections(pos)
+				local dim = core.get_current_dim()
+				update_wire_connections(pos, dim)
 			end,
 			on_rightclick = on_rightclick,
 			_mcl_armor_trim_color = wire == 0 and "#e80202" or nil,
@@ -293,12 +297,12 @@ local fourdirs = {
 	vector.new(0, 0, -1),
 }
 
-function mcl_redstone._connect_with_wires(pos)
+function mcl_redstone._connect_with_wires(pos, dim)
 	for _, dir in pairs(fourdirs) do
 		local pos2 = pos:add(dir)
-		local node = core.get_node(pos2)
+		local node = core.get_node(pos2, dim)
 		if core.get_item_group(node.name, "redstone_wire") ~= 0 then
-			update_wire(pos2)
+			update_wire(pos2, dim)
 		end
 	end
 end

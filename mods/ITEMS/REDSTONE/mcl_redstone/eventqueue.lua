@@ -19,7 +19,7 @@ local current_tick = 0
 -- Table containing the highest priority update event for each node position.
 local update_event_tab = {}
 
-function mcl_redstone._schedule_update(delay, priority, pos, node, oldnode)
+function mcl_redstone._schedule_update(delay, priority, pos, node, oldnode, dim)
 	local h = core.hash_node_position(pos)
 	if update_event_tab[h] and priority >= update_event_tab[h].priority then
 		return
@@ -40,11 +40,18 @@ function mcl_redstone._schedule_update(delay, priority, pos, node, oldnode)
 		priority = priority,
 		node = node,
 		oldnode = oldnode,
+		dim = dim,
 	}
 	update_event_tab[h] = event
 	eventqueue:enqueue(tick, event)
 end
 
+-- Schedule `func` to run after `delay` redstone ticks, inside the redstone
+-- globalstep (NOT core.after). The func runs contextless — it has no
+-- DimContextGuard — so callers that close over a `pos` must also close over
+-- the originating `dim` (captured via core.get_current_dim() at the callback
+-- entry point) and pass it to any core.get_node / swap_node / get_objects_*
+-- calls inside the func. See logic.lua on_construct/after_destruct overrides.
 function mcl_redstone.after(delay, func)
 	local tick = current_tick + delay
 	local event = {
@@ -71,13 +78,14 @@ local function handle_update_event(event)
 	end
 
 	update_event_tab[h] = nil
-	local oldnode = core.get_node(event.pos)
+	local dim = event.dim
+	local oldnode = core.get_node(event.pos, dim)
 	if oldnode.name ~= event.oldnode.name or oldnode.param2 ~= event.oldnode.param2 then
 		return
 	end
-	core.swap_node(event.pos, event.node)
-	mcl_redstone._update_neighbours(event.pos, event.oldnode, event.node)
-	mcl_redstone._notify_observer_neighbours(event.pos)
+	core.swap_node(event.pos, event.node, dim)
+	mcl_redstone._update_neighbours(event.pos, event.oldnode, event.node, dim)
+	mcl_redstone._notify_observer_neighbours(event.pos, dim)
 end
 
 local function handle_event(event)
@@ -153,14 +161,15 @@ function mcl_redstone.tick_step()
 		last_tick = event.tick
 	end
 
-	for h, pos in pairs(mcl_redstone._pending_updates) do
+	for h, entry in pairs(mcl_redstone._pending_updates) do
 		if get_time() > endtime then
 			log_redstone_events(true)
 			return
 		end
 
 		nupdates = nupdates + 1
-		mcl_redstone._call_update(pos)
+		-- entry is {pos=, dim=} (see set_pending_update in logic.lua).
+		mcl_redstone._call_update(entry.pos, entry.dim)
 		mcl_redstone._pending_updates[h] = nil
 	end
 

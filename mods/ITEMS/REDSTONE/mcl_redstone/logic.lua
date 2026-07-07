@@ -439,7 +439,7 @@ function mcl_redstone._update_neighbours(pos, oldnode, newnode, dim)
 		end
 
 		for func, _ in pairs(callbacks) do
-			func(pos, oldnode, newnode)
+			func(pos, oldnode, newnode, dim)
 		end
 	end
 end

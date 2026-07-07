@@ -23,9 +23,10 @@ core.register_on_mods_loaded(function()
 end)
 
 mcl_player.register_globalstep(function(player)
+	local dim = player:get_dimension()
 	local pos = player:get_pos()
 	local npos = vector.add(pos, mcl_player.node_offsets.stand)
-	local node = core.get_node(npos)
+	local node = core.get_node(npos, dim)
 	if on_object_over[mcl_player.players[player].nodes.stand] then
 		on_object_over[mcl_player.players[player].nodes.stand](npos, node, player)
 	end
@@ -34,10 +35,10 @@ mcl_player.register_globalstep(function(player)
 	end
 	if on_object_in[mcl_player.players[player].nodes.feet] then
 		local npos = vector.add(pos, mcl_player.node_offsets.feet)
-		on_object_in[mcl_player.players[player].nodes.feet](npos, core.get_node(npos), player)
+		on_object_in[mcl_player.players[player].nodes.feet](npos, core.get_node(npos, dim), player)
 	end
 	if on_object_in[mcl_player.players[player].nodes.head] then
 		local npos = vector.add(pos, mcl_player.node_offsets.head)
-		on_object_in[mcl_player.players[player].nodes.head](npos, core.get_node(npos), player)
+		on_object_in[mcl_player.players[player].nodes.head](npos, core.get_node(npos, dim), player)
 	end
 end)

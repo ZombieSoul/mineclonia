@@ -102,7 +102,8 @@ mcl_farming:add_plant("plant_sweet_berry_bush", "mcl_farming:sweet_berry_bush_3"
 local function berry_damage_check(obj)
 	local p = obj:get_pos()
 	if not p then return end
-	if not core.find_node_near(p,0.4,{"group:sweet_berry_thorny"},true) then return end
+	local dim = obj:get_dimension()
+	if not core.find_node_near(p,0.4,{"group:sweet_berry_thorny"},true,dim) then return end
 	local v = obj:get_velocity()
 	if math.abs(v.x) < 0.1 and math.abs(v.y) < 0.1 and math.abs(v.z) < 0.1 then return end
 

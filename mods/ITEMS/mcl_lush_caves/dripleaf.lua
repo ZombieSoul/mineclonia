@@ -276,14 +276,15 @@ core.register_node("mcl_lush_caves:dripleaf_big_tipped_full", dripleaf_big_tippe
 local player_dripleaf = {}
 core.register_globalstep(function(dtime)
 	for _,p in pairs(core.get_connected_players()) do
+		local dim = p:get_dimension()
 		local pos = vector.offset(p:get_pos(),0,-1,0)
-		local node = core.get_node(pos)
+		local node = core.get_node(pos, dim)
 		if node and node.name == "mcl_lush_caves:dripleaf_big"
-			and mcl_redstone.get_power(pos) == 0 then
+			and mcl_redstone.get_power(pos, nil, nil, dim) == 0 then
 			if not player_dripleaf[p] then player_dripleaf[p] = 0 end
 			player_dripleaf[p] = player_dripleaf[p] + dtime
 			if player_dripleaf[p] > 0.5 then
-				core.swap_node(pos,{name = "mcl_lush_caves:dripleaf_big_tipped_half", param2 = node.param2})
+				core.swap_node(pos,{name = "mcl_lush_caves:dripleaf_big_tipped_half", param2 = node.param2}, dim)
 				player_dripleaf[p] = nil
 				local t = core.get_node_timer(pos)
 				t:start(0.5)

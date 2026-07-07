@@ -7,18 +7,18 @@ local fourdirs = {
 	[3] = vector.new(-1, 0, 0),
 }
 
-function mcl_redstone.update_comparators(pos)
+function mcl_redstone.update_comparators(pos, _, _, dim)
 	for _, dir in pairs(fourdirs) do
 		local pos2 = pos:add(dir)
-		local node2 = core.get_node(pos2)
+		local node2 = core.get_node(pos2, dim)
 
 		if dir == core.fourdir_to_dir(node2.param2) and node2.name:find("mcl_comparators:comparator_") then
-			mcl_redstone.update_node(pos2)
+			mcl_redstone.update_node(pos2, dim)
 		elseif mcl_redstone._solid_opaque_tab[node2.name] then
 			local pos3 = pos2:add(dir)
-			local node3 = core.get_node(pos3)
+			local node3 = core.get_node(pos3, dim)
 			if dir == core.fourdir_to_dir(node3.param2) and node3.name:find("mcl_comparators:comparator_") then
-				mcl_redstone.update_node(pos3)
+				mcl_redstone.update_node(pos3, dim)
 			end
 		end
 	end

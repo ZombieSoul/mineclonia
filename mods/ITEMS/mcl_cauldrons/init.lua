@@ -268,19 +268,21 @@ core.register_globalstep(function(dtime)
 	if etime < 0.5 then return end
 	etime = 0
 	for pl in mcl_util.connected_players() do
-		local n = core.find_node_near(pl:get_pos(),0.4,{"group:cauldron_filled"},true)
-		if n and not core.get_node(n).name:find("lava") then
+		local dim = pl:get_dimension()
+		local n = core.find_node_near(pl:get_pos(),0.4,{"group:cauldron_filled"},true,dim)
+		if n and not core.get_node(n,dim).name:find("lava") then
 			cauldron_extinguish(pl,n)
-		elseif n and core.get_node(n).name:find("lava") then
+		elseif n and core.get_node(n,dim).name:find("lava") then
 				mcl_burning.set_on_fire(pl, 5)
 		end
 	end
 	for _,ent in pairs(core.luaentities) do
 		if ent.object:get_pos() and ent.is_mob then
-			local n = core.find_node_near(ent.object:get_pos(),0.4,{"group:cauldron_filled"},true)
-			if n and not core.get_node(n).name:find("lava") then
+			local dim = ent.object:get_dimension()
+			local n = core.find_node_near(ent.object:get_pos(),0.4,{"group:cauldron_filled"},true,dim)
+			if n and not core.get_node(n,dim).name:find("lava") then
 				cauldron_extinguish(ent.object,n)
-			elseif n and core.get_node(n).name:find("lava") then
+			elseif n and core.get_node(n,dim).name:find("lava") then
 				mcl_burning.set_on_fire(ent.object, 5)
 			end
 		end

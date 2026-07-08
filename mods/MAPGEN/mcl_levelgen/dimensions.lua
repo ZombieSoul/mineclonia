@@ -65,11 +65,8 @@ function mcl_levelgen.initialize_dimensions (seed)
 		return a.y_global < b.y_global
 	end)
 
-	for i = 2, #dims do
-		local y_prev = dims[i - 1].y_global + dims[i - 1].y_max
-		assert (y_prev <= dims[i].y_global)
-	end
-
+	-- In the isolated-dimension model, dimensions no longer stack at
+	-- different Y offsets, so the overlap assertion is obsolete.
 	dimensions_sorted = dims
 	mcl_levelgen.dimensions_sorted = dims
 

@@ -12,6 +12,10 @@ minetest.register_dimension("nether", {
         mg_flags = "caves,light,decorations,biomes,ores",
         water_level = 31,
     },
+    -- Spawn above the lava sea (Y=31) on the nether terrain surface.
+    -- mcl_levelgen generates nether terrain at Y=0..127; Y=64 is a
+    -- safe midpoint above the lava level.
+    spawn_pos = {x = 0, y = 64, z = 0},
 })
 
 -- End
@@ -21,6 +25,9 @@ minetest.register_dimension("end", {
         mg_flags = "caves,light",
         water_level = 0,
     },
+    -- Spawn on the end platform area. mcl_levelgen generates end terrain
+    -- around Y=48 (the obsidian platform level).
+    spawn_pos = {x = 0, y = 50, z = 0},
 })
 
 -- Log dimensions on startup

@@ -157,6 +157,12 @@ local function populate_namespaces ()
 end
 
 if core.register_on_mods_loaded then
+	-- Main environment: populate now if dimensions are already
+	-- initialized, and also re-populate on mods_loaded in case
+	-- dimensions were registered after this file loaded.
+	if mcl_levelgen.for_each_dimension then
+		populate_namespaces ()
+	end
 	core.register_on_mods_loaded (function ()
 		populate_namespaces ()
 		mcl_levelgen.clear_sections_loaded ()

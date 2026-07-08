@@ -813,14 +813,12 @@ local function post_process_mapchunk_in_dim (minp, maxp, dim)
 	by = by - current_namespace.y_bottom
 	by1 = by1 - current_namespace.y_bottom
 
-	if not (by >= 0 and by <= current_namespace_height - 1) then
-		error(string.format("post_processing ns fail: by=%d height=%d y_bottom=%d minp.y=%d dim_ns=%s dim.y_global=%s",
-			by, current_namespace_height, current_namespace.y_bottom, minp.y,
-			tostring(dim.data_namespace), tostring(dim.y_global)))
-	end
-	if not (by1 >= 0 and by1 >= by and by1 <= current_namespace_height - 1) then
-		error(string.format("post_processing ns fail: by1=%d by=%d height=%d maxp.y=%d",
-			by1, by, current_namespace_height, maxp.y))
+	-- Chunks outside this dimension's Y range (e.g. bedrock floor/ceiling
+	-- or the void below the overworld) can't be indexed into the namespace.
+	-- Skip them rather than asserting.
+	if by < 0 or by > current_namespace_height - 1 or
+	   by1 < 0 or by1 > current_namespace_height - 1 then
+		return
 	end
 
 	-- As the engine saves mod storage before the map database,

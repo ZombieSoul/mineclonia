@@ -242,7 +242,7 @@ end
 ------------------------------------------------------------------------
 
 mcl_levelgen.register_dimension ("mcl_levelgen:overworld", {
-	y_global = 0,
+	y_global = mcl_vars.mg_overworld_min,
 	engine_dim_name = "overworld",
 	data_namespace = 0,
 	create_preset = function (self, seed)

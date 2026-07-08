@@ -463,15 +463,34 @@ local LIMBO_POSITION = vector.new (31007, 31007, 31007)
 
 local get_dimension = mcl_levelgen.get_dimension
 local global_spawnpoint = core.setting_get_pos ("static_spawnpoint")
+local global_spawnpoints = {}  -- per-engine-dimension cache
 
-function mcl_biome_dispatch.get_spawn_point_2d ()
-	if levelgen_enabled and global_spawnpoint then
+-- Map engine dimension names to mcl_levelgen dimension IDs.
+local function levelgen_dim_for_engine (engine_name)
+	local entry = mcl_levelgen.by_engine_name and mcl_levelgen.by_engine_name[engine_name]
+	if entry then
+		return get_dimension (entry.id)
+	end
+	return get_dimension ("mcl_levelgen:overworld")
+end
+
+function mcl_biome_dispatch.get_spawn_point_2d (engine_dim_name)
+	engine_dim_name = engine_dim_name or "overworld"
+	if levelgen_enabled and global_spawnpoint and engine_dim_name == "overworld" then
 		return global_spawnpoint
 	elseif levelgen_enabled then
-		local level = get_dimension ("mcl_levelgen:overworld")
+		-- Cache per-dimension spawn points.
+		if global_spawnpoints[engine_dim_name] then
+			return global_spawnpoints[engine_dim_name]
+		end
+		local level = levelgen_dim_for_engine (engine_dim_name)
 		local x, z = level.preset:find_spawn_position ()
-		global_spawnpoint = vector.new (x, 0, -z - 1)
-		return global_spawnpoint
+		local pos = vector.new (x, 0, -z - 1)
+		global_spawnpoints[engine_dim_name] = pos
+		if engine_dim_name == "overworld" then
+			global_spawnpoint = pos
+		end
+		return pos
 	else
 		return vector.new (0, 0, 0)
 	end
@@ -481,20 +500,20 @@ function mcl_biome_dispatch.use_detailed_spawning_mechanics ()
 	return levelgen_enabled
 end
 
-local function is_up_face_sturdy (v)
-	local node = core.get_node (v)
+local function is_up_face_sturdy (v, engine_dim)
+	local node = core.get_node (v, engine_dim)
 	return mcl_mobs.is_up_face_sturdy (v, node)
 end
 
-local function is_walkable (v, y_off)
+local function is_walkable (v, y_off, engine_dim)
 	v.y = v.y + y_off
-	local node = core.get_node (v)
+	local node = core.get_node (v, engine_dim)
 	v.y = v.y - y_off
 	local def = core.registered_nodes[node.name]
 	return def and def.walkable
 end
 
-local function move_respawn_position (dim, v)
+local function move_respawn_position (dim, v, engine_dim)
 	local surface, _
 		= mcl_levelgen.map_index_heightmap (dim, v.x, v.z, false)
 	if not surface then
@@ -502,20 +521,20 @@ local function move_respawn_position (dim, v)
 	end
 	local y = surface + dim.y_global - 2
 	v.y = y
-	core.load_area (v)
+	core.load_area (v, nil, engine_dim)
 
-	if is_up_face_sturdy (v) then
+	if is_up_face_sturdy (v, engine_dim) then
 		local up_face_sturdy = true
 		-- Search upwards for solid ground.
 		for y = y, y + 80 do
 			if up_face_sturdy
-				and not is_walkable (v, 1)
-				and not is_walkable (v, 2) then
+				and not is_walkable (v, 1, engine_dim)
+				and not is_walkable (v, 2, engine_dim) then
 				v.y = y + 0.5
 				return true
 			end
 			v.y = y + 1
-			up_face_sturdy = is_up_face_sturdy (v)
+			up_face_sturdy = is_up_face_sturdy (v, engine_dim)
 		end
 	else
 		-- Search downwards for solid ground.
@@ -524,9 +543,9 @@ local function move_respawn_position (dim, v)
 				break
 			end
 			v.y = y
-			if is_up_face_sturdy (v)
-				and not is_walkable (v, 1)
-				and not is_walkable (v, 2) then
+			if is_up_face_sturdy (v, engine_dim)
+				and not is_walkable (v, 1, engine_dim)
+				and not is_walkable (v, 2, engine_dim) then
 				v.y = y + 0.5
 				return true
 			end
@@ -557,9 +576,17 @@ local function respawn_set_pos (player, _)
 end
 
 function mcl_biome_dispatch.next_respawn_position (obj)
-	local spawn_pos = mcl_biome_dispatch.get_spawn_point_2d ()
+	-- Determine which engine dimension to spawn in. For new players (obj
+	-- is a player, first login) this is the overworld. For respawns, use
+	-- the player's dimension (or overworld as fallback).
+	local engine_dim = "overworld"
+	if obj and obj.is_player and obj:is_player() then
+		engine_dim = obj:get_dimension() or "overworld"
+	end
+
+	local spawn_pos = mcl_biome_dispatch.get_spawn_point_2d (engine_dim)
 	local spawn_radius = tonumber (core.settings:get ("mcl_spawn_radius")) or 24
-	local dim = get_dimension ("mcl_levelgen:overworld")
+	local dim = levelgen_dim_for_engine (engine_dim)
 	local v1 = vector.offset (spawn_pos, -spawn_radius, 0, -spawn_radius)
 	local v2 = vector.offset (spawn_pos, spawn_radius, 0, spawn_radius)
 	v1.y = dim.y_global
@@ -590,12 +617,12 @@ function mcl_biome_dispatch.next_respawn_position (obj)
 		v.x = spawn_pos.x + dx
 		v.z = spawn_pos.z + dz
 
-		if move_respawn_position (dim, v) then
+		if move_respawn_position (dim, v, engine_dim) then
 			return v
 		end
 	end
 	local v = vector.copy (spawn_pos)
-	move_respawn_position (dim, v)
+	move_respawn_position (dim, v, engine_dim)
 	return v
 end
 

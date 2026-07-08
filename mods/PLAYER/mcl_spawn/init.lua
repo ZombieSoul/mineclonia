@@ -215,14 +215,24 @@ function mcl_spawn.spawn(player)
 
 	-- The engine finds a spawn position but sometimes players are spawned
 	-- in the air. To avoid fall damage players are moved down such that
-	-- they stand on top of a node.
+	-- they stand on top of a node. Use the player's dimension for node
+	-- lookups and its min Y as the search floor.
 	core.after(0, function()
+		local dim = player:get_dimension()
+		local y_min = 0
+		if dim == "overworld" then
+			y_min = mcl_vars.mg_overworld_min
+		elseif dim == "nether" then
+			y_min = mcl_vars.mg_nether_min
+		elseif dim == "end" then
+			y_min = mcl_vars.mg_end_min
+		end
 		local pos = vector.round(player:get_pos())
-		while pos.y > mcl_vars.mg_overworld_min do
+		while pos.y > y_min do
 			pos.y = pos.y - 1
-			core.load_area(pos)
+			core.load_area(pos, nil, dim)
 
-			local node = core.get_node(pos)
+			local node = core.get_node(pos, dim)
 			local ndef = core.registered_nodes[node.name]
 			if ndef and (ndef.walkable or ndef.liquidtype ~= "none") then
 				break

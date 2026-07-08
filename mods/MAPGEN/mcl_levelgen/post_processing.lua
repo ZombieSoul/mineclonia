@@ -897,7 +897,7 @@ end
 
 if not mcl_levelgen.load_feature_environment then
 	local function _pp_gate(minp, maxp, blockseed, dim_name)
-		if dim_name and dim_name ~= "overworld" then return end
+		if not dim_name or not mcl_levelgen.by_engine_name[dim_name] then return end
 		return post_process_mapchunk(minp, maxp, blockseed)
 	end
 	core.register_on_generated (_pp_gate)

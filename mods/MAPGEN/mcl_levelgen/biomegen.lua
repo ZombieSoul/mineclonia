@@ -334,7 +334,9 @@ core.set_gen_notify ({ custom = true, }, nil, {
 })
 
 core.register_on_generated (function (minp, maxp, blockseed, dim_name)
-	if dim_name and dim_name ~= "overworld" then return end
+	-- Only process dimensions that have a known mcl_levelgen level.
+	mcl_levelgen.set_generation_dim (dim_name)
+	if not dim_name or not mcl_levelgen.by_engine_name[dim_name] then return end
 	local custom = core.get_mapgen_object ("gennotify").custom
 	if not custom then
 		return

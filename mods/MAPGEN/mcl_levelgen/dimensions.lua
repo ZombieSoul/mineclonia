@@ -73,6 +73,17 @@ function mcl_levelgen.initialize_dimensions (seed)
 	dimensions_sorted = dims
 	mcl_levelgen.dimensions_sorted = dims
 
+	-- Build engine-dim-name → mcl_levelgen dimension lookup. Used by
+	-- register_on_generated to route terrain by dim_name instead of Y.
+	local by_engine_name = {}
+	for _, dim in ipairs(dims) do
+		local desc = registered_dimensions[dim.id]
+		if desc and desc.engine_dim_name then
+			by_engine_name[desc.engine_dim_name] = dim
+		end
+	end
+	mcl_levelgen.by_engine_name = by_engine_name
+
 	local overworld = mcl_levelgen.get_dimension ("mcl_levelgen:overworld")
 	mcl_levelgen.overworld_preset = overworld.preset
 
@@ -107,6 +118,19 @@ function mcl_levelgen.initialize_terrain (dim)
 	end
 end
 
+-- The dimension currently being generated, set by register_on_generated
+-- from the engine's dim_name parameter. When set, the Y-based lookups
+-- below use this instead of deriving the dimension from Y coordinates —
+-- which is necessary in the isolated-dimension model where every
+-- dimension occupies the same Y range (y_global = 0).
+local current_generation_dim
+
+-- Set the generation context. Called at each register_on_generated entry
+-- point with the engine's dim_name. nil clears it.
+function mcl_levelgen.set_generation_dim (dim_name)
+	current_generation_dim = dim_name and mcl_levelgen.by_engine_name[dim_name]
+end
+
 local function dim_intersect_p (dim, y1, y2)
 	return y2 >= dim.y_global and y1 <= dim.y_max
 end
@@ -119,6 +143,20 @@ local i, y1, y2
 
 local function dims_intersecting_iterator ()
 	local dims = dimensions_sorted
+	-- In the isolated-dimension model, the generation context tells us
+	-- which dimension this chunk belongs to. Return it directly — y_offset
+	-- is 0 so the Y math collapses.
+	if current_generation_dim then
+		local dim = current_generation_dim
+		local cg = i == 1  -- only yield once
+		i = i + 1
+		if cg then
+			local y_start = y1 + dim.y_offset
+			local y_end = y2 + dim.y_offset
+			return y1, y2, y_start, y_end, dim
+		end
+		return nil
+	end
 	while i <= #dims do
 		local dim = dimensions_sorted[i]
 		i = i + 1
@@ -140,6 +178,10 @@ function mcl_levelgen.dims_intersecting (y1i, y2i)
 end
 
 function mcl_levelgen.dimension_at_layer (y)
+	-- In the isolated-dimension model, use the generation context.
+	if current_generation_dim then
+		return current_generation_dim
+	end
 	for _, dim in ipairs (dimensions_sorted) do
 		if y >= dim.y_global and y <= dim.y_max then
 			return dim
@@ -203,7 +245,8 @@ end
 ------------------------------------------------------------------------
 
 mcl_levelgen.register_dimension ("mcl_levelgen:overworld", {
-	y_global = mcl_vars.mg_overworld_min,
+	y_global = 0,
+	engine_dim_name = "overworld",
 	data_namespace = 0,
 	create_preset = function (self, seed)
 		local use_large_biomes = mcl_levelgen.use_large_biomes
@@ -213,7 +256,8 @@ mcl_levelgen.register_dimension ("mcl_levelgen:overworld", {
 })
 
 mcl_levelgen.register_dimension ("mcl_levelgen:nether", {
-	y_global = mcl_vars.mg_nether_min,
+	y_global = 0,
+	engine_dim_name = "nether",
 	data_namespace = 1,
 	create_preset = function (self, seed)
 		return mcl_levelgen.make_nether_preset (seed)
@@ -222,7 +266,8 @@ mcl_levelgen.register_dimension ("mcl_levelgen:nether", {
 })
 
 mcl_levelgen.register_dimension ("mcl_levelgen:end", {
-	y_global = mcl_vars.mg_end_min,
+	y_global = 0,
+	engine_dim_name = "end",
 	data_namespace = 2,
 	create_preset = function (self, seed)
 		return mcl_levelgen.make_end_preset (seed)

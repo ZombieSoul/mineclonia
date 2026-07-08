@@ -89,15 +89,18 @@ local function transform_structure_pieces (pieces, dim, minp, maxp)
 	end
 end
 
-local dims_intersecting = mcl_levelgen.dims_intersecting
+local by_engine_name = mcl_levelgen.by_engine_name
 
 core.register_on_generated (function (vmanip, minp, maxp, _, dim_name)
-	-- Only run Mineclonia's levelgen for the overworld dimension.
-	-- Other dimensions (registered via the engine dimension API) use
-	-- their own mapgen and should not have Mineclonia terrain.
-	if dim_name and dim_name ~= "overworld" then
+	-- Route terrain generation by the engine's dim_name, not by Y.
+	-- Each engine dimension generates its own terrain at normal Y in its
+	-- isolated map. y_offset is 0 for all dimensions (y_global=0).
+	mcl_levelgen.set_generation_dim (dim_name)
+	local dim = by_engine_name and by_engine_name[dim_name]
+	if not dim then
 		return
 	end
+
 	-- profile.start ("5fv")
 	-- do_jit_ctrl ()
 	local emin, emax = vmanip:get_emerged_area ()
@@ -105,80 +108,59 @@ core.register_on_generated (function (vmanip, minp, maxp, _, dim_name)
 			  vector.subtract (emax, minp))
 	vmanip:get_data (cids)
 	vmanip:get_param2_data (param2s)
-	local generated = false
 
-	for y1, y2, ystart, yend, dim in dims_intersecting (minp.y, maxp.y) do
-		if generated then
-			-- Mostly since it would inflate the size of
-			-- the gen_notify arrays, and doesn't really
-			-- appear to be necessary.
-			error ("Not yet implemented: simultaneous generation of multiple dimensions")
-		end
+	local block_x = minp.x / 16
+	local block_y = minp.y / 16
+	local block_z = minp.z / 16
+	assert (block_x == floor (block_x))
+	assert (block_y == floor (block_y))
+	assert (block_z == floor (block_z))
+	local preset, terrain = dim.preset, dim.terrain
+	local level_min = preset.min_y / 16
+	local level_height = preset.height / 16
+	assert (level_min == floor (level_min))
+	assert (level_height == floor (level_height))
 
-		local block_x = minp.x / 16
-		local block_y = (dim.y_offset + minp.y) / 16
-		local block_z = minp.z / 16
-		assert (block_x == floor (block_x))
-		assert (block_y == floor (block_y))
-		assert (block_z == floor (block_z))
-		local preset, terrain = dim.preset, dim.terrain
-		local level_min = preset.min_y / 16
-		local level_height = preset.height / 16
-		assert (level_min == floor (level_min))
-		assert (level_height == floor (level_height))
-		-- print (string.format ("{%d,%d,%d,%d,%d,%d,},", minp.x, minp.y, minp.z,
-		-- 		      maxp.x, maxp.y, maxp.z))
-		-- local clock = core.get_us_time ()
-		-- zone ("Biome generation")
-		mcl_levelgen.generate_biomes_at_block (preset, biomes, block_x,
-						       level_min, block_z,
-						       mt_chunksize.x, level_height)
-		-- zone ()
-		-- zone ("Terrain generation")
-		if not terrain:generate (minp.x, dim.y_offset + minp.y,
-					 -minp.z - chunksize, cids, param2s,
-					 structuremask, index, biomes) then
-			local notifications, _
-				= mcl_levelgen.flush_structure_gen_data ()
-			core.save_gen_notify ("mcl_levelgen:gen_notifies", notifications)
-			core.save_gen_notify ("mcl_levelgen:structure_pieces", nil)
-			return
-		end
-		-- print (string.format ("%.2f", (core.get_us_time () - clock) / 1000))
-		-- zone ()
-		vmanip:set_data (cids)
-		vmanip:set_param2_data (param2s)
+	mcl_levelgen.generate_biomes_at_block (preset, biomes, block_x,
+					       level_min, block_z,
+					       mt_chunksize.x, level_height)
 
-		if not dim.no_lighting then
-			vmanip:set_lighting ({day=0, night=0,}, minp, maxp)
-		end
-		-- Artificial light should be processed even when the
-		-- level is otherwise assumed to be sunlit.
-		vmanip:calc_lighting (minp, maxp)
-		local notifications, pieces
+	if not terrain:generate (minp.x, minp.y,
+				 -minp.z - chunksize, cids, param2s,
+				 structuremask, index, biomes) then
+		local notifications, _
 			= mcl_levelgen.flush_structure_gen_data ()
 		core.save_gen_notify ("mcl_levelgen:gen_notifies", notifications)
-		transform_structure_pieces (pieces, dim, minp, maxp)
-		core.save_gen_notify ("mcl_levelgen:structure_pieces", pieces)
+		core.save_gen_notify ("mcl_levelgen:structure_pieces", nil)
+		return
+	end
 
-		-- zone ("Biome encoding")
-		local compressed
-			= mcl_levelgen.encode_biomes (biomes, block_y - level_min,
-						      mt_chunksize.y, mt_chunksize.x,
-						      level_height)
-		core.save_gen_notify ("mcl_levelgen:biome_data", compressed)
-		-- zone ()
+	vmanip:set_data (cids)
+	vmanip:set_param2_data (param2s)
 
-		core.save_gen_notify ("mcl_levelgen:level_height_map", {
-			level = terrain.heightmap,
-			wg = terrain.heightmap_wg,
-		})
+	if not dim.no_lighting then
+		vmanip:set_lighting ({day=0, night=0,}, minp, maxp)
+	end
+	vmanip:calc_lighting (minp, maxp)
+	local notifications, pieces
+		= mcl_levelgen.flush_structure_gen_data ()
+	core.save_gen_notify ("mcl_levelgen:gen_notifies", notifications)
+	transform_structure_pieces (pieces, dim, minp, maxp)
+	core.save_gen_notify ("mcl_levelgen:structure_pieces", pieces)
 
-		if #structuremask > 6 then
-			core.save_gen_notify ("mcl_levelgen:structure_mask",
-					      structuremask)
-		end
+	local compressed
+		= mcl_levelgen.encode_biomes (biomes, block_y - level_min,
+					      mt_chunksize.y, mt_chunksize.x,
+					      level_height)
+	core.save_gen_notify ("mcl_levelgen:biome_data", compressed)
 
-		generated = true
+	core.save_gen_notify ("mcl_levelgen:level_height_map", {
+		level = terrain.heightmap,
+		wg = terrain.heightmap_wg,
+	})
+
+	if #structuremask > 6 then
+		core.save_gen_notify ("mcl_levelgen:structure_mask",
+				      structuremask)
 	end
 end)

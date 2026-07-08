@@ -132,6 +132,7 @@ local max_data_namespace = 0
 -- Build a list of namespaces from currently registered dimensions.
 
 
+if core.register_on_mods_loaded then
 core.register_on_mods_loaded (function ()
 	local for_each_dimension = mcl_levelgen.for_each_dimension
 	for _, dim in for_each_dimension () do
@@ -167,6 +168,7 @@ core.register_on_mods_loaded (function ()
 	end
 	mcl_levelgen.clear_sections_loaded ()
 end)
+end
 
 
 local function switch_to_namespace (id)

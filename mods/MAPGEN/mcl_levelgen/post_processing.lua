@@ -130,32 +130,20 @@ local current_namespace = nil
 local max_data_namespace = 0
 
 -- Build a list of namespaces from currently registered dimensions.
-
-
-if core.register_on_mods_loaded then
-core.register_on_mods_loaded (function ()
+-- Runs unconditionally — in the main environment via register_on_mods_loaded
+-- (dimensions may be registered after this file loads), and in the async
+-- environment directly (register_on_mods_loaded doesn't exist there, but
+-- initialize_dimensions has already run by the time we load).
+local function populate_namespaces ()
 	local for_each_dimension = mcl_levelgen.for_each_dimension
 	for _, dim in for_each_dimension () do
 		local namespace = {
-			-- MapBlock extents of the level this
-			-- namespace represents in the global
-			-- coordinate system.
 			y_bottom = floor (dim.y_global / 16),
 			y_top = floor (dim.y_max / 16),
-
-			-- Node extents of the level this namespace
-			-- represents in the global coordinate system.
 			y_global = dim.y_global,
 			y_global_top = dim.y_max,
-
-			-- Bottom of level in its coordinate system.
 			y_min = dim.preset.min_y,
-
-			-- Offset for translating global coordinates
-			-- into level-local coordinates.
 			y_offset = dim.y_offset,
-
-			-- Identifiers.
 			dim_id = dim.id,
 			data_namespace = dim.data_namespace,
 		}
@@ -166,8 +154,16 @@ core.register_on_mods_loaded (function ()
 		max_data_namespace = mathmax (dim.data_namespace,
 					      max_data_namespace)
 	end
-	mcl_levelgen.clear_sections_loaded ()
-end)
+end
+
+if core.register_on_mods_loaded then
+	core.register_on_mods_loaded (function ()
+		populate_namespaces ()
+		mcl_levelgen.clear_sections_loaded ()
+	end)
+else
+	-- Async environment: dimensions are already initialized.
+	populate_namespaces ()
 end
 
 

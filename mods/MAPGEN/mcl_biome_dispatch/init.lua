@@ -587,6 +587,11 @@ function mcl_biome_dispatch.next_respawn_position (obj)
 	local spawn_pos = mcl_biome_dispatch.get_spawn_point_2d (engine_dim)
 	local spawn_radius = tonumber (core.settings:get ("mcl_spawn_radius")) or 24
 	local dim = levelgen_dim_for_engine (engine_dim)
+	core.log("action", "[SPAWN] engine_dim=" .. engine_dim 
+		.. " spawn_pos=" .. minetest.pos_to_string(spawn_pos)
+		.. " dim.y_global=" .. dim.y_global
+		.. " dim.y_max=" .. dim.y_max
+		.. " dim.y_offset=" .. dim.y_offset)
 	local v1 = vector.offset (spawn_pos, -spawn_radius, 0, -spawn_radius)
 	local v2 = vector.offset (spawn_pos, spawn_radius, 0, spawn_radius)
 	v1.y = dim.y_global
@@ -664,6 +669,8 @@ local function generate_spawn_area ()
 				    report_spawn_generation_progress)
 end
 
+core.log("action", "[SPAWN] use_detailed_spawning_mechanics = " .. tostring(mcl_biome_dispatch.use_detailed_spawning_mechanics ()))
+
 if mcl_biome_dispatch.use_detailed_spawning_mechanics () then
 	core.register_on_mods_loaded (function ()
 		core.after (0.1, generate_spawn_area)
@@ -674,6 +681,7 @@ if mcl_biome_dispatch.use_detailed_spawning_mechanics () then
 	-- registered respawn callbacks.
 	core.register_on_newplayer (function (player)
 		local pos = mcl_biome_dispatch.next_respawn_position (player)
+		core.log("action", "[SPAWN] newplayer spawn pos = " .. minetest.pos_to_string(pos))
 		player:set_pos (pos)
 	end)
 end

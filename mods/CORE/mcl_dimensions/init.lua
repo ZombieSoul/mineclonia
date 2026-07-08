@@ -7,18 +7,18 @@ minetest.log("action", "[mcl_dimensions] registering dimensions")
 
 -- Nether
 minetest.register_dimension("nether", {
-    mapgen = "v7",
+    mapgen = "singlenode",
     settings = {
-        mg_flags = "caves,light,decorations,biomes,ores",
+        mg_flags = "",
         water_level = 31,
     },
 })
 
 -- End
 minetest.register_dimension("end", {
-    mapgen = "v7",
+    mapgen = "singlenode",
     settings = {
-        mg_flags = "caves,light",
+        mg_flags = "",
         water_level = 0,
     },
 })

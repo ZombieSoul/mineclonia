@@ -233,18 +233,13 @@ end
 
 mcl_vars.mg_overworld_max = mcl_vars.mapgen_edge_max
 
--- The Nether (around Y = -29000)
-if mcl_vars.enable_mcl_levelgen then
-	mcl_vars.mg_nether_min = -29072
-else
-	-- XXX: the subsequent comment is drivel: it isn't so much as
-	-- a multiple of 16!!
-	mcl_vars.mg_nether_min = -29067 -- Carefully chosen to be at a mapchunk border
-end
-mcl_vars.mg_nether_max = mcl_vars.mg_nether_min + 128
+-- The Nether — now an isolated engine dimension at normal Y (0..127).
+-- These constants are relative to the nether dimension's own map.
+mcl_vars.mg_nether_min = 0
+mcl_vars.mg_nether_max = 127
 mcl_vars.mg_bedrock_nether_bottom_min = mcl_vars.mg_nether_min
 mcl_vars.mg_bedrock_nether_top_max = mcl_vars.mg_nether_max
-mcl_vars.mg_nether_deco_max = mcl_vars.mg_nether_max -11 -- this is so ceiling decorations don't spill into other biomes as bedrock generation calls core.generate_decorations to put netherrack under the bedrock
+mcl_vars.mg_nether_deco_max = mcl_vars.mg_nether_max - 11
 if not mcl_vars.superflat then
 	mcl_vars.mg_bedrock_nether_bottom_max = mcl_vars.mg_bedrock_nether_bottom_min + 4
 	mcl_vars.mg_bedrock_nether_top_min = mcl_vars.mg_bedrock_nether_top_max - 4
@@ -265,20 +260,15 @@ if mg_name == "flat" then
 	end
 end
 
--- The End (surface at ca. Y = -27000)
-if mcl_vars.enable_mcl_levelgen then
-	mcl_vars.mg_end_min = -26880
-else
-	-- XXX: the subsequent comment is drivel: it isn't so much as
-	-- a multiple of 16!!
-	mcl_vars.mg_end_min = -27073 -- Carefully chosen to be at a mapchunk border
-end
+-- The End — now an isolated engine dimension at normal Y.
+mcl_vars.mg_end_min = 0
 mcl_vars.mg_end_max_official = mcl_vars.mg_end_min + minecraft_height_limit
-mcl_vars.mg_end_max = mcl_vars.mg_overworld_min - 2000
+mcl_vars.mg_end_max = 255
 mcl_vars.mg_end_platform_pos = { x = 100, y = mcl_vars.mg_end_min + 48, z = 0 }
 mcl_vars.mg_end_exit_portal_pos = vector.new(0, mcl_vars.mg_end_min + 71, 0)
 
--- Realm barrier used to safely separate the End from the void below the Overworld
+-- Realm barrier (no longer needed in the isolated-dimension model, but
+-- kept for compatibility with any code that still reads it).
 mcl_vars.mg_realm_barrier_overworld_end_max = mcl_vars.mg_end_max
 mcl_vars.mg_realm_barrier_overworld_end_min = mcl_vars.mg_end_max - 11
 

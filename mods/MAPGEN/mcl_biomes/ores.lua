@@ -232,9 +232,9 @@ if core.settings:get_bool("mcl_generate_ores", true) then
 		-- in MC it's 0.004% chance (~= scarcity 25000) but reports and experiments show that ancient debris is unreasonably hard to find in survival with that value
 		clust_num_ores = 3,
 		clust_size     = 3,
-		y_min = mcl_vars.mg_nether_min + 8,
-		y_max = mcl_vars.mg_nether_min + 22,
-	})
+		y_min = 8,
+		y_max = 22,
+	}, "nether")
 
 	-- Rare spawn (below)
 	core.register_ore({
@@ -244,9 +244,9 @@ if core.settings:get_bool("mcl_generate_ores", true) then
 		clust_scarcity = 32000,
 		clust_num_ores = 2,
 		clust_size     = 3,
-		y_min = mcl_vars.mg_nether_min,
-		y_max = mcl_vars.mg_nether_min + 8,
-	})
+		y_min = 0,
+		y_max = 8,
+	}, "nether")
 
 	-- Rare spawn (above)
 	core.register_ore({
@@ -256,9 +256,9 @@ if core.settings:get_bool("mcl_generate_ores", true) then
 		clust_scarcity = 32000,
 		clust_num_ores = 2,
 		clust_size     = 3,
-		y_min = mcl_vars.mg_nether_min + 22,
-		y_max = mcl_vars.mg_nether_min + 119,
-	})
+		y_min = 22,
+		y_max = 119,
+	}, "nether")
 
 	local stonelike = { "mcl_core:stone", "mcl_core:diorite", "mcl_core:andesite", "mcl_core:granite" }
 

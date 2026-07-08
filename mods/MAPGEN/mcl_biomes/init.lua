@@ -2663,6 +2663,8 @@ local function register_dimension_biomes()
 	})
 
 
+	-- Nether biomes: registered against the nether dimension's biome
+	-- manager with normal-Y ranges (the dimension's map uses Y 0..127).
 	core.register_biome({
 		name = "Nether",
 		node_filler = "mcl_nether:netherrack",
@@ -2671,9 +2673,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_nether_min,
-
-		y_max = mcl_vars.mg_nether_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 100,
 		humidity_point = 0,
 		_mcl_biome_type = "hot",
@@ -2683,7 +2684,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_nether = true,
 		},
-	})
+	}, "nether")
 
 	core.register_decoration({
 		deco_type = "simple",
@@ -2691,12 +2692,12 @@ local function register_dimension_biomes()
 		sidelen = 16,
 		fill_ratio = 10,
 		biomes = { "Nether" },
-		y_min = mcl_vars.mg_lava_nether_max,
-		y_max = mcl_vars.mg_nether_deco_max,
+		y_min = 1,
+		y_max = 127,
 		decoration = "mcl_nether:netherrack",
 		flags = "all_floors",
 		param2 = 0,
-	})
+	}, "nether")
 
 	core.register_biome({
 		name = "SoulsandValley",
@@ -2706,8 +2707,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_nether_min,
-		y_max = mcl_vars.mg_nether_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 77,
 		humidity_point = 33,
 		_mcl_biome_type = "hot",
@@ -2717,19 +2718,19 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_nether = true,
 		},
-	})
+	}, "nether")
 	core.register_decoration({
 		deco_type = "simple",
 		place_on = {"mcl_nether:netherrack","mcl_nether:glowstone","mcl_nether:magma"},
 		sidelen = 16,
 		fill_ratio = 10,
 		biomes = { "SoulsandValley" },
-		y_min = mcl_vars.mg_lava_nether_max,
-		y_max = mcl_vars.mg_nether_deco_max,
+		y_min = 1,
+		y_max = 127,
 		decoration = "mcl_blackstone:soul_soil",
 		flags = "all_floors, all_ceilings",
 		param2 = 0,
-	})
+	}, "nether")
 
 	core.register_ore({
 		ore_type       = "blob",
@@ -2739,8 +2740,8 @@ local function register_dimension_biomes()
 		clust_num_ores = 225,
 		clust_size     = 15,
 		biomes = { "SoulsandValley" },
-		y_min = mcl_vars.mg_lava_nether_max,
-		y_max = mcl_vars.mg_nether_deco_max,
+		y_min = 1,
+		y_max = 127,
 		noise_params = {
 			offset  = 0,
 			scale   = 1,
@@ -2751,7 +2752,7 @@ local function register_dimension_biomes()
 			lacunarity = 2,
 			flags = "defaults",
 		}
-	})
+	}, "nether")
 	core.register_biome({
 		name = "CrimsonForest",
 		node_filler = "mcl_nether:netherrack",
@@ -2760,8 +2761,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_nether_min,
-		y_max = mcl_vars.mg_nether_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 60,
 		humidity_point = 47,
 		_mcl_biome_type = "hot",
@@ -2771,19 +2772,19 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_nether = true,
 		},
-	})
+	}, "nether")
 	core.register_decoration({
 		deco_type = "simple",
 		place_on = {"mcl_nether:netherrack","mcl_nether:glowstone","mcl_blackstone:nether_gold","mcl_nether:quartz_ore","mcl_core:gravel","mcl_nether:soul_sand","mcl_nether:magma","mcl_blackstone:blackstone"},
 		sidelen = 16,
 		fill_ratio = 10,
 		biomes = { "CrimsonForest" },
-		y_min = mcl_vars.mg_lava_nether_max,
-		y_max = mcl_vars.mg_nether_deco_max,
+		y_min = 1,
+		y_max = 127,
 		decoration = "mcl_crimson:crimson_nylium",
 		flags = "all_floors",
 		param2 = 0,
-	})
+	}, "nether")
 	core.register_biome({
 		name = "WarpedForest",
 		node_filler = "mcl_nether:netherrack",
@@ -2792,8 +2793,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_nether_min,
-		y_max = mcl_vars.mg_nether_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 37,
 		humidity_point = 70,
 		_mcl_biome_type = "hot",
@@ -2803,19 +2804,19 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_nether = true,
 		},
-	})
+	}, "nether")
 	core.register_decoration({
 		deco_type = "simple",
 		place_on = {"mcl_nether:netherrack","mcl_nether:glowstone","mcl_blackstone:nether_gold","mcl_nether:quartz_ore","mcl_core:gravel","mcl_nether:soul_sand","mcl_nether:magma","mcl_blackstone:blackstone"},
 		sidelen = 16,
 		fill_ratio = 10,
 		biomes = { "WarpedForest" },
-		y_min = mcl_vars.mg_lava_nether_max,
-		y_max = mcl_vars.mg_nether_deco_max,
+		y_min = 1,
+		y_max = 127,
 		decoration = "mcl_crimson:warped_nylium",
 		flags = "all_floors",
 		param2 = 0,
-	})
+	}, "nether")
 	core.register_biome({
 		name = "BasaltDelta",
 		node_filler = "mcl_nether:netherrack",
@@ -2824,8 +2825,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_nether_min,
-		y_max = mcl_vars.mg_nether_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 27,
 		humidity_point = 80,
 		_mcl_biome_type = "hot",
@@ -2835,7 +2836,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_nether = true,
 		},
-	})
+	}, "nether")
 
 	core.register_decoration({
 		deco_type = "simple",
@@ -2843,39 +2844,41 @@ local function register_dimension_biomes()
 		sidelen = 16,
 		fill_ratio = 10,
 		biomes = { "BasaltDelta" },
-		y_min = mcl_vars.mg_lava_nether_max,
-		y_max = mcl_vars.mg_nether_deco_max,
+		y_min = 1,
+		y_max = 127,
 		decoration = "mcl_blackstone:basalt",
 		flags = "all_floors",
 		param2 = 0,
-	})
+	}, "nether")
 
 	core.register_ore({
-	ore_type       = "blob",
-	ore            = "mcl_blackstone:blackstone",
-	wherein        =  {"mcl_nether:netherrack","mcl_nether:glowstone","mcl_core:gravel"},
-	clust_scarcity = 100,
-	clust_num_ores = 400,
-	clust_size     = 20,
-	biomes = { "BasaltDelta" },
-	y_min = mcl_vars.mg_lava_nether_max,
-	y_max = mcl_vars.mg_nether_deco_max,
-	noise_params = {
-		offset  = 0,
-		scale   = 1,
-		spread  = { x = 250, y = 250, z = 250 },
-		seed    = 12345,
-		octaves = 3,
-		persist = 0.6,
-		lacunarity = 2,
-		flags = "defaults",
-	}
-	})
+		ore_type       = "blob",
+		ore            = "mcl_blackstone:blackstone",
+		wherein        =  {"mcl_nether:netherrack","mcl_nether:glowstone","mcl_core:gravel"},
+		clust_scarcity = 100,
+		clust_num_ores = 400,
+		clust_size     = 20,
+		biomes = { "BasaltDelta" },
+		y_min = 1,
+		y_max = 127,
+		noise_params = {
+			offset  = 0,
+			scale   = 1,
+			spread  = { x = 250, y = 250, z = 250 },
+			seed    = 12345,
+			octaves = 3,
+			persist = 0.6,
+			lacunarity = 2,
+			flags = "defaults",
+		}
+	}, "nether")
 
 	dofile(modpath.."/ores.lua")
 	--needs to be loaded *after* biome definitions
 
 	--[[ THE END ]]
+	-- End biomes: registered against the end dimension's biome manager
+	-- with normal-Y ranges.
 	core.register_biome({
 		name = "End",
 		node_stone = "air",
@@ -2883,8 +2886,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_end_min,
-		y_max = mcl_vars.mg_end_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 1000, --ridiculously high values so End Island always takes precedent
 		humidity_point = 1000,
 		vertical_blend = 16,
@@ -2895,7 +2898,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_end = true,
 		},
-	})
+	}, "end")
 	core.register_biome({
 		name = "EndBarrens",
 		node_stone = "air",
@@ -2903,8 +2906,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_end_min,
-		y_max = mcl_vars.mg_end_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 1000,
 		humidity_point = 1000,
 		vertical_blend = 16,
@@ -2915,7 +2918,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_end = true,
 		},
-	})
+	}, "end")
 	core.register_biome({
 		name = "EndMidlands",
 		node_stone = "air",
@@ -2923,8 +2926,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_end_min,
-		y_max = mcl_vars.mg_end_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 1000,
 		humidity_point = 1000,
 		vertical_blend = 16,
@@ -2935,7 +2938,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_end = true,
 		},
-	})
+	}, "end")
 	core.register_biome({
 		name = "EndHighlands",
 		node_stone = "air",
@@ -2943,8 +2946,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_end_min,
-		y_max = mcl_vars.mg_end_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 1000,
 		humidity_point = 1000,
 		vertical_blend = 16,
@@ -2955,7 +2958,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_end = true,
 		},
-	})
+	}, "end")
 	core.register_biome({
 		name = "EndSmallIslands",
 		node_stone = "air",
@@ -2963,8 +2966,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_end_min,
-		y_max = mcl_vars.mg_end_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 1000,
 		humidity_point = 1000,
 		vertical_blend = 16,
@@ -2975,7 +2978,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_end = true,
 		},
-	})
+	}, "end")
 
 	core.register_biome({
 		name = "EndBorder",
@@ -2984,13 +2987,13 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		y_min = mcl_vars.mg_end_min,
-		y_max = mcl_vars.mg_end_max + 80,
+		y_min = 0,
+		y_max = 31000,
 		heat_point = 500,
 		humidity_point = 500,
 		vertical_blend = 16,
-		max_pos = {x = 1250, y = mcl_vars.mg_end_min + 512, z = 1250},
-		min_pos = {x = -1250, y = mcl_vars.mg_end_min, z = -1250},
+		max_pos = {x = 1250, y = 512, z = 1250},
+		min_pos = {x = -1250, y = 0, z = -1250},
 		_mcl_biome_type = "medium",
 		_mcl_palette_index = 0,
 		_mcl_skycolor = end_skycolor,
@@ -2998,7 +3001,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_end = true,
 		},
-	})
+	}, "end")
 
 	core.register_biome({
 		name = "EndIsland",
@@ -3007,8 +3010,8 @@ local function register_dimension_biomes()
 		node_water = "air",
 		node_river_water = "air",
 		node_cave_liquid = "air",
-		max_pos = {x = 650, y = mcl_vars.mg_end_min + 512, z = 650},
-		min_pos = {x = -650, y = mcl_vars.mg_end_min, z = -650},
+		max_pos = {x = 650, y = 512, z = 650},
+		min_pos = {x = -650, y = 0, z = -650},
 		heat_point = 50,
 		humidity_point = 50,
 		vertical_blend = 16,
@@ -3019,7 +3022,7 @@ local function register_dimension_biomes()
 		_mcl_groups = {
 			is_end = true,
 		},
-	})
+	}, "end")
 
 end
 
@@ -6324,7 +6327,25 @@ end
 
 -- Decorations in non-Overworld dimensions
 local function register_dimension_decorations()
+	-- Scope all decorations/ores in this function to the correct dimension
+	-- by temporarily wrapping register_decoration/register_ore to append
+	-- the dim argument. This ensures nether decorations land in the nether
+	-- dimension's DecorationManager and end decorations in the end's.
+	local _register_decoration = core.register_decoration
+	local _register_ore = core.register_ore
+	local _current_dim
+	local function scoped_register_decoration(def)
+		return _register_decoration(def, _current_dim)
+	end
+	local function scoped_register_ore(def)
+		return _register_ore(def, _current_dim)
+	end
+
 	--[[ NETHER ]]
+	_current_dim = "nether"
+	core.register_decoration = scoped_register_decoration
+	core.register_ore = scoped_register_ore
+
 	--NETHER WASTES (Nether)
 	core.register_decoration({
 		deco_type = "simple",
@@ -6668,6 +6689,7 @@ local function register_dimension_decorations()
 	})
 
 	--[[ THE END ]]
+	_current_dim = "end"
 
 	-- Chorus plant
 	core.register_decoration({
@@ -6718,6 +6740,9 @@ local function register_dimension_decorations()
 
 	-- TODO: End cities
 
+	-- Restore the original register functions.
+	core.register_decoration = _register_decoration
+	core.register_ore = _register_ore
 end
 
 

@@ -1,95 +1,71 @@
 mcl_worlds = {}
 
+-- In the engine's isolated-dimension model, each dimension has its own map.
+-- Dimension is determined by the engine's dimension context (which dimension's
+-- map the code is operating in), not by Y coordinate. These functions use
+-- core.get_current_dim() which reads the DimContextGuard pushed by the engine
+-- in callbacks, defaulting to “overworld” in globalsteps.
+
 -- For a given position, returns a 2-tuple:
 -- 1st return value: true if pos is in void
 -- 2nd return value: true if it is in the deadly part of the void
+-- In the isolated-dimension model there is no void between dimensions; the
+-- only void is below the dimension's map edge. The deadly tolerance applies
+-- to falling below the bottom of any dimension's map.
 function mcl_worlds.is_in_void(pos)
-	local void =
-		not ((pos.y < mcl_vars.mg_overworld_max and pos.y > mcl_vars.mg_overworld_min) or
-		(pos.y < mcl_vars.mg_nether_max+128 and pos.y > mcl_vars.mg_nether_min) or
-		(pos.y < mcl_vars.mg_end_max and pos.y > mcl_vars.mg_end_min))
-
-	local void_deadly = false
-	local deadly_tolerance = 64 -- the player must be this many nodes “deep” into the void to be damaged
-	if void then
-		-- Overworld → Void → End → Void → Nether → Void
-		if pos.y < mcl_vars.mg_overworld_min and pos.y > mcl_vars.mg_end_max then
-			void_deadly = pos.y < mcl_vars.mg_overworld_min - deadly_tolerance
-		elseif pos.y < mcl_vars.mg_end_min and pos.y > mcl_vars.mg_nether_max+128 then
-			-- The void between End and Nether. Like usual, but here, the void
-			-- *above* the Nether also has a small tolerance area, so player
-			-- can fly above the Nether without getting hurt instantly.
-			void_deadly = (pos.y < mcl_vars.mg_end_min - deadly_tolerance) and (pos.y > mcl_vars.mg_nether_max+128 + deadly_tolerance)
-		elseif pos.y < mcl_vars.mg_nether_min then
-			void_deadly = pos.y < mcl_vars.mg_nether_min - deadly_tolerance
-		end
+	local dim = core.get_current_dim()
+	local y_min
+	if dim == “nether” then
+		y_min = mcl_vars.mg_nether_min
+	elseif dim == “end” then
+		y_min = mcl_vars.mg_end_min
+	else
+		y_min = mcl_vars.mg_overworld_min
 	end
+	local void = pos.y < y_min - 64
+	local void_deadly = void and (pos.y < y_min - 128)
 	return void, void_deadly
 end
 
--- Takes an Y coordinate as input and returns:
--- 1) The corresponding Minecraft layer (can be nil if void)
--- 2) The corresponding Minecraft dimension ("overworld", "nether" or "end") or "void" if it is in the void
--- If the Y coordinate is not located in any dimension, it will return:
---     nil, "void"
+-- Takes a Y coordinate and returns:
+-- 1) The layer within the current dimension (Y itself, since y_offset = 0)
+-- 2) The dimension name (from the engine context)
 function mcl_worlds.y_to_layer(y)
-	if y >= mcl_vars.mg_overworld_min then
-		return y - mcl_vars.mg_overworld_min_old, "overworld"
-	elseif y >= mcl_vars.mg_nether_min and y <= mcl_vars.mg_nether_max+128 then
-		return y - mcl_vars.mg_nether_min, "nether"
-	elseif y >= mcl_vars.mg_end_min and y <= mcl_vars.mg_end_max then
-		return y - mcl_vars.mg_end_min, "end"
-	else
-		return nil, "void"
-	end
+	local dim = core.get_current_dim()
+	return y, dim
 end
 
--- Takes a pos and returns the dimension it belongs to (same as above)
+-- Takes a pos and returns the dimension it belongs to.
+-- In the isolated-dimension model, the dimension is determined by context,
+-- not by Y — every position belongs to the dimension whose map is active.
 function mcl_worlds.pos_to_dimension(pos)
-	local _, dim = mcl_worlds.y_to_layer(pos.y)
-	return dim
+	return core.get_current_dim()
 end
 
--- Takes a Minecraft layer and a “dimension” name
--- and returns the corresponding Y coordinate for
--- Mineclonia.
--- mc_dimension is one of "overworld", "nether", "end" (default: "overworld").
+-- Takes a Minecraft layer and a dimension name and returns the Y coordinate.
+-- In the isolated-dimension model, Y = layer (y_offset = 0 for all dims).
 function mcl_worlds.layer_to_y(layer, mc_dimension)
-	if mc_dimension == "overworld" or mc_dimension == nil then
-		return layer + mcl_vars.mg_overworld_min_old
-	elseif mc_dimension == "nether" then
-		return layer + mcl_vars.mg_nether_min
-	elseif mc_dimension == "end" then
-		return layer + mcl_vars.mg_end_min
-	end
+	return layer
 end
 
--- Takes a position and returns true if this position can have weather
+-- Takes a position and returns true if this position can have weather.
+-- Only the overworld has weather.
 function mcl_worlds.has_weather(pos)
-	-- Weather in the Overworld and the high part of the void below
-	return pos.y <= mcl_vars.mg_overworld_max and pos.y >= mcl_vars.mg_overworld_min - 64
+	return core.get_current_dim() == “overworld”
 end
 
--- Takes a position and returns true if this position can have Nether dust
+-- Takes a position and returns true if this position can have Nether dust.
 function mcl_worlds.has_dust(pos)
-	-- Weather in the Overworld and the high part of the void below
-	return pos.y <= mcl_vars.mg_nether_max + 138 and pos.y >= mcl_vars.mg_nether_min - 10
+	return core.get_current_dim() == “nether”
 end
 
--- Takes a position (pos) and returns true if compasses are working here
+-- Takes a position (pos) and returns true if compasses are working here.
+-- Compasses work only in the overworld.
 function mcl_worlds.compass_works(pos)
-	-- It doesn't work in Nether and the End, but it works in the Overworld and in the high part of the void below
-	local _, dim = mcl_worlds.y_to_layer(pos.y)
-	if dim == "nether" or dim == "end" then
-		return false
-	elseif dim == "void" then
-		return pos.y <= mcl_vars.mg_overworld_max and pos.y >= mcl_vars.mg_overworld_min - 64
-	else
-		return true
-	end
+	return core.get_current_dim() == “overworld”
 end
 
--- Takes a position (pos) and returns true if clocks are working here
+-- Takes a position (pos) and returns true if clocks are working here.
 mcl_worlds.clock_works = mcl_worlds.compass_works
 
 --------------- CALLBACKS ------------------
@@ -126,15 +102,15 @@ local DIM_UPDATE = 1
 local dimtimer = 0
 
 core.register_on_joinplayer(function(player)
-	last_dimension[player:get_player_name()] = mcl_worlds.pos_to_dimension(player:get_pos())
+	last_dimension[player:get_player_name()] = player:get_dimension()
 end)
 
 core.register_globalstep(function(dtime)
-	-- regular updates based on iterval
+	-- regular updates based on interval
 	dimtimer = dimtimer + dtime;
 	if dimtimer >= DIM_UPDATE then
 		for player in mcl_util.connected_players() do
-			local dim = mcl_worlds.pos_to_dimension(player:get_pos())
+			local dim = player:get_dimension()
 			local name = player:get_player_name()
 			if dim ~= last_dimension[name] then
 				mcl_worlds.dimension_change(player, dim)

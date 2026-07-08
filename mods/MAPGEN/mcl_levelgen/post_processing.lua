@@ -813,8 +813,15 @@ local function post_process_mapchunk_in_dim (minp, maxp, dim)
 	by = by - current_namespace.y_bottom
 	by1 = by1 - current_namespace.y_bottom
 
-	assert (by >= 0 and by <= current_namespace_height - 1)
-	assert (by1 >= 0 and by1 >= by and by1 <= current_namespace_height - 1)
+	if not (by >= 0 and by <= current_namespace_height - 1) then
+		error(string.format("post_processing ns fail: by=%d height=%d y_bottom=%d minp.y=%d dim_ns=%s dim.y_global=%s",
+			by, current_namespace_height, current_namespace.y_bottom, minp.y,
+			tostring(dim.data_namespace), tostring(dim.y_global)))
+	end
+	if not (by1 >= 0 and by1 >= by and by1 <= current_namespace_height - 1) then
+		error(string.format("post_processing ns fail: by1=%d by=%d height=%d maxp.y=%d",
+			by1, by, current_namespace_height, maxp.y))
+	end
 
 	-- As the engine saves mod storage before the map database,
 	-- there is still a chance that the database engine will

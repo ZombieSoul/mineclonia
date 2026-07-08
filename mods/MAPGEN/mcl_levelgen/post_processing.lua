@@ -176,6 +176,18 @@ end
 local function switch_to_namespace (id)
 	if id then
 		current_namespace = namespaces[id]
+		if not current_namespace then
+			-- Populate now if not done yet (dimensions may not
+			-- have been initialized when this file loaded).
+			populate_namespaces ()
+			current_namespace = namespaces[id]
+		end
+		if not current_namespace then
+			local keys = {}
+			for k in pairs(namespaces) do keys[#keys+1] = k end
+			error("switch_to_namespace: no namespace for id=" .. tostring(id)
+				.. " available keys: " .. table.concat(keys, ","))
+		end
 		current_namespace_id = id
 		current_namespace_height = current_namespace.height
 	else

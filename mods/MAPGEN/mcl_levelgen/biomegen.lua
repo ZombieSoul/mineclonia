@@ -354,6 +354,7 @@ core.register_on_generated (function (minp, maxp, blockseed, dim_name)
 		pos.z = pos.z * 16 + z
 		save_biome_index (pos, bx + ix, by + iy, bz + iz, index)
 	end
+	mcl_levelgen.clear_generation_dim ()
 end)
 
 end

@@ -163,4 +163,5 @@ core.register_on_generated (function (vmanip, minp, maxp, _, dim_name)
 		core.save_gen_notify ("mcl_levelgen:structure_mask",
 				      structuremask)
 	end
+	mcl_levelgen.clear_generation_dim ()
 end)

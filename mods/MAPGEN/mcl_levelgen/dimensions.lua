@@ -128,6 +128,14 @@ function mcl_levelgen.set_generation_dim (dim_name)
 	current_generation_dim = dim_name and mcl_levelgen.by_engine_name[dim_name]
 end
 
+-- Clear the generation context. Must be called at the END of each
+-- register_on_generated callback so that non-generation callers of
+-- dims_intersecting (e.g. generate_area for spawn) use Y-based lookup
+-- instead of a stale context.
+function mcl_levelgen.clear_generation_dim ()
+	current_generation_dim = nil
+end
+
 local function dim_intersect_p (dim, y1, y2)
 	return y2 >= dim.y_global and y1 <= dim.y_max
 end

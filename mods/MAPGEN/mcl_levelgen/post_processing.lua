@@ -3506,8 +3506,7 @@ function mcl_levelgen.generate_area (x1, y1, z1, x2, y2, z2, cb_progress,
 		n_emerged = 0,
 		n_dimensions = 0,
 	}
-	local namespace = current_namespace
-	core.log("action", "[GENAREA] namespace type=" .. type(namespace) .. " val=" .. tostring(namespace))
+	local saved_namespace_id = current_namespace_id
 	for y1, y2, ystart, yend, dim in dims_intersecting (y1, y2) do
 		local y1 = y1 - dim.y_global
 		local y2 = y2 - dim.y_global
@@ -3515,7 +3514,7 @@ function mcl_levelgen.generate_area (x1, y1, z1, x2, y2, z2, cb_progress,
 				 cb_progress, data1, data2)
 		progress.n_dimensions = progress.n_dimensions + 1
 	end
-	switch_to_namespace (namespace)
+	switch_to_namespace (saved_namespace_id)
 	cb_progress (progress, data1, data2)
 end
 

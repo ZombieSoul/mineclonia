@@ -794,8 +794,12 @@ local function limbo_restore (player, limbo)
 	mcl_util.teleport_safely (player, LIMBO_POSITION)
 	local v1 = limbo.v1
 	local v2 = limbo.v2
+	-- Set the generation context so generate_area processes the correct
+	-- dimension (the limbo's destination dimension).
+	mcl_levelgen.set_generation_dim (limbo.engine_dim or "overworld")
 	mcl_levelgen.generate_area (v1.x, v1.y, v1.z, v2.x, v2.y, v2.z,
 				    limbo_callback, player, limbo)
+	mcl_levelgen.clear_generation_dim ()
 end
 
 core.register_on_leaveplayer (function (player)

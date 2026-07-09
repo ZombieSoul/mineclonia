@@ -665,8 +665,14 @@ local function generate_spawn_area ()
 				  dim.y_max, spawn_radius)
 	core.log ("action", string.format ("Generating world spawn from (%d,%d,%d) to (%d,%d,%d)",
 					   v1.x, v1.y, v1.z, v2.x, v2.y, v2.z))
+	-- Set the generation context to overworld so generate_area's
+	-- dims_intersecting only processes the overworld dimension, not the
+	-- overlapping nether/end (which share the same Y range in the
+	-- isolated-dimension model).
+	mcl_levelgen.set_generation_dim ("overworld")
 	mcl_levelgen.generate_area (v1.x, v1.y, v1.z, v2.x, v2.y, v2.z,
 				    report_spawn_generation_progress)
+	mcl_levelgen.clear_generation_dim ()
 end
 
 core.log("action", "[SPAWN] use_detailed_spawning_mechanics = " .. tostring(mcl_biome_dispatch.use_detailed_spawning_mechanics ()))

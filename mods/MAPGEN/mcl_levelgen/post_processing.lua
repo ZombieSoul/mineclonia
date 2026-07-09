@@ -3507,6 +3507,7 @@ function mcl_levelgen.generate_area (x1, y1, z1, x2, y2, z2, cb_progress,
 		n_dimensions = 0,
 	}
 	local namespace = current_namespace
+	core.log("action", "[GENAREA] namespace type=" .. type(namespace) .. " val=" .. tostring(namespace))
 	for y1, y2, ystart, yend, dim in dims_intersecting (y1, y2) do
 		local y1 = y1 - dim.y_global
 		local y2 = y2 - dim.y_global

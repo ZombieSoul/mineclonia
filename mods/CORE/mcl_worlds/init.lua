@@ -4,7 +4,7 @@ mcl_worlds = {}
 -- Dimension is determined by the engine's dimension context (which dimension's
 -- map the code is operating in), not by Y coordinate. These functions use
 -- core.get_current_dim() which reads the DimContextGuard pushed by the engine
--- in callbacks, defaulting to “overworld” in globalsteps.
+-- in callbacks, defaulting to "overworld" in globalsteps.
 
 -- For a given position, returns a 2-tuple:
 -- 1st return value: true if pos is in void
@@ -15,9 +15,9 @@ mcl_worlds = {}
 function mcl_worlds.is_in_void(pos)
 	local dim = core.get_current_dim()
 	local y_min
-	if dim == “nether” then
+	if dim == "nether" then
 		y_min = mcl_vars.mg_nether_min
-	elseif dim == “end” then
+	elseif dim == "end" then
 		y_min = mcl_vars.mg_end_min
 	else
 		y_min = mcl_vars.mg_overworld_min
@@ -51,18 +51,18 @@ end
 -- Takes a position and returns true if this position can have weather.
 -- Only the overworld has weather.
 function mcl_worlds.has_weather(pos)
-	return core.get_current_dim() == “overworld”
+	return core.get_current_dim() == "overworld"
 end
 
 -- Takes a position and returns true if this position can have Nether dust.
 function mcl_worlds.has_dust(pos)
-	return core.get_current_dim() == “nether”
+	return core.get_current_dim() == "nether"
 end
 
 -- Takes a position (pos) and returns true if compasses are working here.
 -- Compasses work only in the overworld.
 function mcl_worlds.compass_works(pos)
-	return core.get_current_dim() == “overworld”
+	return core.get_current_dim() == "overworld"
 end
 
 -- Takes a position (pos) and returns true if clocks are working here.
@@ -139,7 +139,7 @@ function mcl_worlds.get_cloud_parameters()
 			color = "#FFF0FEF",
 		}
 	else
-		-- MC-style clouds: Layer 127, thickness 4, fly to the “West”
+		-- MC-style clouds: Layer 127, thickness 4, fly to the "West"
 		return {
 			height = mcl_worlds.layer_to_y(127),
 			speed = {x=-2, z=0},

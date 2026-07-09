@@ -894,9 +894,10 @@ local function post_process_mapchunk_in_dim (minp, maxp, dim)
 		-- parent[hash] = { minp = minp, maxp = maxp, }
 	end
 
-	save_gen_data (bx, bx1, by, by1, bz, bz1, chunksize)
-	run_structure_notifications ()
-	schedule_regeneration_for_emerge (bx, bx1, by, by1, bz, bz1)
+	if save_gen_data (bx, bx1, by, by1, bz, bz1, chunksize) ~= nil then
+		run_structure_notifications ()
+		schedule_regeneration_for_emerge (bx, bx1, by, by1, bz, bz1)
+	end
 	switch_to_namespace (nil)
 end
 
@@ -2386,10 +2387,14 @@ function save_gen_data (bx, bx1, by, by1, bz, bz1, chunksize)
 	local custom = core.get_mapgen_object ("gennotify").custom
 	assert (custom)
 	local heightmaps = custom["mcl_levelgen:level_height_map"]
-	assert (heightmaps)
+	if not heightmaps then
+		return nil
+	end
 	local data = heightmaps.level
 	local data_wg = heightmaps.wg
-	assert (data and data_wg)
+	if not (data and data_wg) then
+		return nil
+	end
 
 	-- Verify the dimensions of this heightmap.
 	local idx_max = chunksize * chunksize
